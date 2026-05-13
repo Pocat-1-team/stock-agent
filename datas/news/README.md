@@ -1,21 +1,15 @@
-# News Data
+# News Data Pipeline & Semantic Retrieval
 
-뉴스 데이터 수집 및 전처리 작업 공간입니다.
+기업 뉴스, 산업 이슈, 거시경제 기사 및 공시 기반 텍스트 데이터를 수집·정제·벡터화(Vectorization)하는 작업 공간입니다.
 
-본 파트는 단순 뉴스 크롤링이 아니라,
+본 파트는 단순 뉴스 크롤링이 아니라, 국내외 다양한 뉴스 소스와 공시 데이터를 통합하여 투자 판단에 필요한 정성적(Qualitative) 정보를 장기적으로 추적·분석 가능한 형태로 구조화하는 것을 목표로 합니다.
 
-```text
-국내 금융 뉴스 데이터를 수집하고,
-장기 투자 판단에 활용 가능한 형태로 구조화하는 것
-```
+수집 및 적재된 데이터는 이후:
 
-을 목표로 합니다.
-
-수집된 뉴스 데이터는 이후:
-
-- News/RAG Agent
-- Synthesizer Agent
-- Portfolio Strategist Agent
+- Qual Worker Agent
+- Strategist & Synthesizer Agent
+- Curator Agent
+- Guardrail & Evaluator Agent
 
 등에서 사용됩니다.
 
@@ -23,200 +17,176 @@
 
 # 담당 범위
 
-- 국내 금융 뉴스 수집
-- 기사 제목 / 본문 / 발행 시각 / 출처 / URL 정리
-- 섹터 기반 뉴스 필터링
-- 장기 산업 트렌드 뉴스 수집
-- 중복 기사 식별 기준 정의
-- `raw_news` 테이블 적재
-- 뉴스 전처리 및 정규화
-- 감성 분석 / 이벤트 유형 분류 확장 준비
+- 국내외 금융/경제 뉴스 수집
+- 산업·섹터별 뉴스 파이프라인 구축
+- 기사 본문 정제 및 중복 제거
+- 뉴스 메타데이터 구조화
+- 임베딩(Vector Embedding) 생성 및 저장
+- Vector DB(Chroma) 기반 Semantic Search 구축
+- 기업·섹터·이벤트 기반 뉴스 분류
+- 감성(Sentiment) 및 이벤트(Event Type) 전처리
+- PostgreSQL + Chroma 이중 저장 구조 관리
 
 ---
 
-# 뉴스 데이터 수집 전략
+# 데이터 수집 전략
 
 본 프로젝트는:
 
-```text
-과거 3~4년 데이터를 기반으로
-향후 5년 관점의 장기 투자 판단
-```
-
-을 목표로 합니다.
-
-따라서 모든 뉴스를 무차별 수집하지 않고,
-
-```text
-사용자가 선택한 관심 섹터 중심으로
-관련 종목 및 산업 뉴스만 선택적으로 수집
-```
-
-하는 구조로 설계합니다.
+- 과거 3~5년의 뉴스 흐름을 기반으로 기업의 장기 투자 맥락(Context)을 분석하는 것을 목표로 합니다.
+- 단순 실시간 속보 수집보다, 투자 의사결정에 의미 있는 정성 데이터의 누적과 구조화를 우선합니다.
+- 특정 기업뿐 아니라 섹터·매크로·경쟁사 뉴스까지 함께 수집하여 산업 단위 분석이 가능하도록 설계합니다.
+- 네이버 뉴스 단일 의존이 아니라, 다양한 국내외 경제/증권 뉴스 소스를 병렬적으로 활용합니다.
+- 중복 기사 및 복제 기사 문제를 고려하여 제목·본문 유사도 기반 중복 제거 로직을 적용합니다.
 
 예시:
 
-| 섹터 | 대표 종목 |
-| --- | --- |
-| 반도체 | 삼성전자, SK하이닉스 |
-| 금융 | KB금융, 신한지주 |
-| 바이오 | 셀트리온, 삼성바이오로직스 |
+| 종목코드 | 기업명 | 뉴스 유형 | 기사 예시 |
+|---|---|---|---|
+| 005930 | 삼성전자 | 산업 트렌드 | AI 서버 투자 확대 |
+| 000660 | SK하이닉스 | 실적 기대 | HBM 수요 증가 |
+| 035420 | NAVER | 규제 이슈 | 플랫폼 규제 논의 |
 
 ---
 
-# 국내 뉴스 소스
+# 국내외 뉴스 소스
 
-| 소스 | source 값 | 수집 방식 |
-| --- | --- | --- |
-| 연합뉴스 | yonhap | RSS |
-| 한국경제 | hankyung | RSS |
-| 매일경제 | mk | RSS |
-| 이데일리 | edaily | RSS |
-| 네이버 금융 | naver_finance | HTML |
-| 네이버 뉴스 검색 | naver_news | HTML |
-
-초기 구현은 안정적인 RSS 수집부터 진행하고,
-이후 네이버 금융 HTML 스크래핑을 추가합니다.
+| 소스 (Source) | 수집 대상 | 수집 방식 | 비고 |
+|---|---|---|---|
+| 네이버 금융 | 국내 증권 뉴스 | Crawling | 종목별 뉴스 허브 |
+| 한국경제 | 산업/기업 뉴스 | Crawling | 정성 분석 핵심 |
+| 매일경제 | 시장/거시 뉴스 | Crawling | 경제 흐름 분석 |
+| 연합뉴스 | 속보/정책 뉴스 | RSS/API | 이벤트 감지 |
+| Investing.com | 글로벌 시장 뉴스 | Crawling/API | 해외 매크로 |
+| Reuters | 글로벌 기업 뉴스 | API/RSS | 해외 산업 이슈 |
+| Yahoo Finance | 미국 증시 뉴스 | API | 글로벌 Peer 분석 |
 
 ---
 
-# 뉴스 처리 흐름
+# 데이터 처리 흐름 (ETL Pipeline)
 
-```text
-1. 사용자가 섹터 선택
-2. 섹터 기반 종목 universe 생성
-3. 뉴스 소스별 기사 수집
-4. 종목명/섹터 기반 필터링
-5. payload JSON 생성
-6. raw_news 테이블 저장
-7. 이후 전처리 및 RAG 연결
-```
-
----
-
-# raw_news 스키마 방향
-
-초기 뉴스 데이터는 원본 손실을 줄이기 위해 JSONB 기반으로 저장합니다.
-
-핵심 검색 컬럼은 별도 컬럼으로 관리하고,
-원본 전체 데이터는 payload JSONB에 저장합니다.
-
-주요 컬럼:
-
-| 컬럼명 | 설명 |
-| --- | --- |
-| source | 뉴스 출처 |
-| source_name | 출처 이름 |
-| source_type | rss / html |
-| stock_code | 종목코드 |
-| stock_name | 종목명 |
-| sector | 섹터 |
-| title | 기사 제목 |
-| url | 기사 URL |
-| publisher | 언론사 |
-| published_at | 기사 발행 시각 |
-| payload | 원본 JSON 데이터 |
+1. 사용자 관심 섹터 선택
+2. 관련 기업 Universe 생성
+3. 기업명·종목코드 기반 뉴스 수집
+4. 기사 본문 정제 및 광고/불필요 문구 제거
+5. 제목·본문 기반 중복 기사 제거
+6. 기업·섹터·이벤트 태깅
+7. 감성 분석(Sentiment Scoring)
+8. 임베딩 생성
+9. PostgreSQL + Chroma 저장
+10. 이후 RAG 및 Agent 연결
 
 ---
 
-# 뉴스 저장 예시
+# 핵심 스키마 구조
 
-```json
-{
-  "source": "hankyung",
-  "source_name": "한국경제",
-  "source_type": "rss",
+뉴스 데이터는:
 
-  "stock_code": "005930",
-  "stock_name": "삼성전자",
-  "sector": "반도체",
+- 정형 메타데이터 → PostgreSQL
+- 비정형 본문 + 임베딩 → Chroma(Vector DB)
 
-  "title": "삼성전자, AI 반도체 수요 회복 기대",
-  "url": "https://example.com/news/123",
+로 분리 저장합니다.
 
-  "publisher": "한국경제",
-  "published_at": "2026-05-08 09:30:00",
+## PostgreSQL
 
-  "event_type": "industry_trend",
+### news_article
 
-  "keywords": [
-    "HBM",
-    "AI",
-    "반도체"
-  ]
-}
-```
+뉴스 메타데이터 저장용 테이블
+
+| 컬럼명 | 타입 | 설명 |
+|---|---|---|
+| news_id | UUID | 뉴스 고유 ID |
+| stock_code | VARCHAR(6) | 관련 종목 |
+| company_name | VARCHAR(100) | 기업명 |
+| source | VARCHAR(50) | 언론사 |
+| title | TEXT | 기사 제목 |
+| published_at | TIMESTAMP | 발행 시각 |
+| url | TEXT | 원문 링크 |
+| event_type | VARCHAR(50) | 이벤트 유형 |
+| sentiment_score | DECIMAL(3,2) | 감성 점수 |
+| created_at | TIMESTAMP | 수집 시각 |
 
 ---
+
+## Chroma Vector Collection
+
+### news_chunks
+
+
+news_chunks/
+├── id (UUID)
+├── news_id
+├── stock_code
+├── title
+├── body
+├── chunk_index
+├── published_at
+├── embedding (vector)
 
 # 뉴스 전처리 규칙
 
 | 전처리 항목 | 설명 |
-| --- | --- |
-| 중복 제거 | 동일 URL 또는 제목 제거 |
-| 광고 제거 | 리딩방, 급등주 등 제거 |
-| HTML 제거 | HTML 태그 제거 |
-| 날짜 정규화 | TIMESTAMP 형식 통일 |
-| 종목 매핑 | 기사와 종목코드 연결 |
-| 섹터 매핑 | 기사와 섹터 연결 |
-| 키워드 추출 | 핵심 키워드 추출 |
-| 감성 분석 | positive / neutral / negative 분류 |
-| 이벤트 분류 | earnings, regulation, industry_trend 등 |
+|---|---|
+| HTML 제거 | 광고/스크립트 제거 |
+| 본문 정제 | 기자 정보·불필요 문구 제거 |
+| 기사 중복 제거 | 제목 및 본문 유사도 비교 |
+| 날짜 표준화 | UTC/KST 통일 |
+| 종목 태깅 | 기업명 → stock_code 매핑 |
+| 감성 분석 | positive / neutral / negative |
+| 이벤트 분류 | 실적/규제/M&A/수주/산업트렌드 등 |
 
 ---
 
 # 권장 파일 구성
 
-```text
 datas/news/
 ├── README.md
-├── collector.py
-├── rss_collector.py
-├── naver_collector.py
-├── parser.py
-├── preprocessor.py
-└── providers/
-```
-
-수집 소스가 증가할 경우:
-
-```text
-datas/news/providers/
-```
-
-아래에 source별 수집기를 분리합니다.
-
-예시:
-
-```text
-providers/
-├── yonhap.py
-├── hankyung.py
-├── mk.py
-└── naver_finance.py
-```
+├── requirements.txt
+├── config.py
+├── crawl_naver_news.py
+├── crawl_hankyung.py
+├── crawl_maekyung.py
+├── crawl_yonhap.py
+├── crawl_edaily.py
+├── preprocess_news.py
+├── embed_news.py
+├── save_to_chroma.py
+├── save_to_postgres.py
+└── utils/
+    ├── db_manager.py
+    ├── text_cleaner.py
+    ├── deduplicator.py
+    ├── embedding_manager.py
+    └── ticker_mapper.py
 
 ---
 
 # 협업 규칙
 
-- `main` 브랜치 직접 수정 금지
+- main 브랜치 직접 수정 금지
 - 개인 브랜치에서 작업 후 PR 생성
-- 뉴스 관련 코드는 `datas/news/` 아래에서만 작업
-- 공통 로직은 PM/에이전트 담당과 협의 후 분리
-- 새로운 패키지 설치 시 단톡 공유 필수
-- `.env` 및 로컬 데이터는 커밋 금지
+- 크롤링 대상 사이트 변경 시 팀 공유 필수
+- robots.txt 및 요청 빈도 고려
+- 기사 원문 무단 재배포 금지
+- .env 및 로컬 캐시 데이터 커밋 금지
+- 임베딩 모델 변경 시 Agent 담당과 협의 필수
 
 ---
 
 # MVP 목표
-
 초기 MVP 목표:
 
-```text
-1. 국내 뉴스 소스 3개 이상 수집
-2. 섹터 기반 뉴스 필터링
-3. raw_news payload 생성
-4. CSV 또는 DB 저장
-5. 이후 RAG Agent 연결 가능 구조 확보
-```
+- 국내 주요 경제 뉴스 소스 연동
+- 섹터 기반 뉴스 자동 수집
+- 뉴스 메타데이터 구조화
+- Chroma 기반 Semantic Search 구축
+- Qual Agent의 뉴스 기반 정성 분석 연결
+- 기업/섹터 뉴스 흐름 추적 가능 구조 확보
+- 향후 확장 계획 (Phase 2+)
+- 국내 언론사 커버리지 확대
+- 실시간 뉴스 수집 주기 최적화
+- 뉴스 중복 제거 고도화
+- 이벤트 기반 뉴스 클러스터링
+- 뉴스 요약 및 핵심 리스크 추출
+- 멀티모달 데이터(이미지·PDF 리포트) 연결
+- 뉴스 기반 이상 탐지(Event Spike Detection)
