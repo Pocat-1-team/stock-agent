@@ -161,6 +161,14 @@ streamlit run streamlit_app.py
 
 > Streamlit 멀티페이지는 `pages/` 가 *루트* 에 있어야 자동 인식됩니다. `ui/pages/` 같은 곳에 두면 안 됨.
 
+### Docker로 앱까지 실행
+
+```bash
+docker compose --profile app up --build
+```
+
+브라우저에서 `http://localhost:8501`을 엽니다. 현재 Phase 1은 삼성전자 1종목 기준 mock E2E입니다.
+
 ---
 
 ## 🤝 협업 가이드 (반드시 읽어주세요)
@@ -315,8 +323,11 @@ docker compose down
 # 데이터까지 삭제 (⚠️ 주의)
 docker compose down -v
 
-# 앱 컨테이너 빌드 + DB 연결 확인
-docker compose --profile app up --build app
+# 앱 컨테이너 빌드 + Streamlit 실행
+docker compose --profile app up --build
+
+# 앱 컨테이너에서 DB 연결 확인
+docker compose --profile app run --rm app python scripts/check_db.py
 ```
 
 ---
