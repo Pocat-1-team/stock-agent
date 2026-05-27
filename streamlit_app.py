@@ -1,7 +1,16 @@
 import streamlit as st
 
 from stock_agent.graph import build_demo_profile, run_phase1_analysis
-from stock_agent.schemas import Portfolio, UserProfile
+from stock_agent.schemas import Holding, Portfolio, UserProfile
+
+
+_SECTOR_OPTIONS = ["반도체", "금융"]
+_STOCK_OPTIONS = {
+    "삼성전자": {"stock_code": "005930", "sector": "반도체", "current_price": 78000},
+    "SK하이닉스": {"stock_code": "000660", "sector": "반도체", "current_price": 201000},
+    "KB금융": {"stock_code": "105560", "sector": "금융", "current_price": 82000},
+    "신한지주": {"stock_code": "055550", "sector": "금융", "current_price": 56000},
+}
 
 
 def _signal_badge(signal: str) -> str:
@@ -11,6 +20,16 @@ def _signal_badge(signal: str) -> str:
         "padding:0.25rem 0.55rem; border-radius:0.35rem; font-weight:700;'>"
         f"{signal}</span>"
     )
+
+
+def _build_holding_weights(holdings: list[Holding]) -> list[Holding]:
+    total_value = sum(holding.market_value or 0 for holding in holdings)
+    if total_value <= 0:
+        return holdings
+    return [
+        holding.model_copy(update={"weight": (holding.market_value or 0) / total_value})
+        for holding in holdings
+    ]
 
 
 def main() -> None:
@@ -30,21 +49,88 @@ def main() -> None:
             format_func={"low": "낮음", "medium": "보통", "high": "높음"}.get,
         )
         horizon = st.slider("투자 기간(개월)", min_value=1, max_value=36, value=12)
+        target_return_rate = st.slider("목표 수익률", min_value=0, max_value=50, value=10) / 100
+        max_drawdown_tolerance = -st.slider("허용 손실률", min_value=0, max_value=50, value=10) / 100
+        investment_goal = st.selectbox(
+            "투자 목적",
+            options=["growth", "wealth_preservation", "short_term_profit", "dividend"],
+            format_func={
+                "wealth_preservation": "안정적 자산관리",
+                "growth": "중장기 성장",
+                "short_term_profit": "단기 수익",
+                "dividend": "배당",
+            }.get,
+        )
+        experience_level = st.selectbox(
+            "투자 경험",
+            options=["beginner", "intermediate", "advanced"],
+            format_func={"beginner": "초보", "intermediate": "중급", "advanced": "고급"}.get,
+        )
+        preferred_sectors = st.multiselect(
+            "관심 산업",
+            options=_SECTOR_OPTIONS,
+            default=["반도체"],
+        )
         cash_weight = st.slider("현금 비중", min_value=0, max_value=100, value=20) / 100
 
-        st.caption("Phase 1에서는 회원가입 없이 목 프로필과 보유 종목으로 E2E를 검증합니다.")
+        st.caption("회원가입/DB 저장 전까지는 입력값을 세션 안에서만 사용합니다.")
         st.write("보유 종목")
-        for holding in demo_portfolio.holdings:
-            st.write(f"- {holding.corp_name} {holding.weight:.0%}")
+        holding_count = st.number_input("종목 수", min_value=1, max_value=5, value=2, step=1)
+        draft_holdings: list[Holding] = []
+        for index in range(holding_count):
+            default_holding = demo_portfolio.holdings[min(index, len(demo_portfolio.holdings) - 1)]
+            with st.expander(f"종목 {index + 1}", expanded=index == 0):
+                corp_name = st.selectbox(
+                    "종목",
+                    options=list(_STOCK_OPTIONS),
+                    index=list(_STOCK_OPTIONS).index(default_holding.corp_name)
+                    if default_holding.corp_name in _STOCK_OPTIONS
+                    else 0,
+                    key=f"holding_corp_name_{index}",
+                )
+                stock = _STOCK_OPTIONS[corp_name]
+                avg_price = st.number_input(
+                    "평균 매수가",
+                    min_value=1,
+                    value=default_holding.avg_price or stock["current_price"],
+                    step=100,
+                    key=f"holding_avg_price_{index}",
+                )
+                qty = st.number_input(
+                    "수량",
+                    min_value=1,
+                    value=default_holding.qty or 1,
+                    step=1,
+                    key=f"holding_qty_{index}",
+                )
+                draft_holdings.append(
+                    Holding(
+                        stock_code=str(stock["stock_code"]),
+                        corp_name=corp_name,
+                        sector=str(stock["sector"]),
+                        avg_price=int(avg_price),
+                        qty=int(qty),
+                        current_price=int(stock["current_price"]),
+                    )
+                )
+
+        holdings = _build_holding_weights(draft_holdings)
+        for holding in holdings:
+            weight_label = f"{holding.weight:.0%}" if holding.weight is not None else "계산 불가"
+            st.write(f"- {holding.corp_name} {weight_label}")
 
     user_profile = UserProfile(
         user_id=demo_profile.user_id,
         risk_tolerance=risk_label,
         investment_horizon_months=horizon,
+        target_return_rate=target_return_rate,
+        max_drawdown_tolerance=max_drawdown_tolerance,
+        investment_goal=investment_goal,
+        experience_level=experience_level,
         cash_source=demo_profile.cash_source,
-        preferred_sectors=demo_profile.preferred_sectors,
+        preferred_sectors=preferred_sectors,
     )
-    portfolio = Portfolio(holdings=demo_portfolio.holdings, cash_weight=cash_weight)
+    portfolio = Portfolio(holdings=holdings, cash_weight=cash_weight)
 
     st.title("국내 주식 포트폴리오 분석")
     st.caption("Curator -> Quant/Qual/Competitor -> Strategist -> Guardrail")
