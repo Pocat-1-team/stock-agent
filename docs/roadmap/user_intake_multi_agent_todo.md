@@ -164,12 +164,12 @@ DB schema는 팀 합의 후 별도 PR로 진행한다. Phase 0 기준 책임 범
 
 ### Phase 6. Strategist 개인화 강화
 
-- [ ] 투자성향별 suitability 계산 기준 추가
-- [ ] 보유 비중이 높은 경우 안정형 사용자에게 경고 강화
-- [ ] 급등/급락 이벤트와 투자성향 불일치 시 next_actions 차별화
-- [ ] 현금 비중과 투자 기간을 함께 반영
-- [ ] 최종 signal과 suitability를 분리해서 설명
-- [ ] Guardrail 문구와 충돌하지 않도록 표현 정리
+- [x] 투자성향별 suitability 계산 기준 추가
+- [x] 보유 비중이 높은 경우 안정형 사용자에게 경고 강화
+- [x] 급등/급락 이벤트와 투자성향 불일치 시 next_actions 차별화
+- [x] 현금 비중과 투자 기간을 함께 반영
+- [x] 최종 signal과 suitability를 분리해서 설명
+- [x] Guardrail 문구와 충돌하지 않도록 표현 정리
 
 ### Phase 7. DB 연결 준비
 
