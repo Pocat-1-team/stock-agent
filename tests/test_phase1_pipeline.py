@@ -93,3 +93,47 @@ def test_curator_matches_non_samsung_holding_from_query() -> None:
     assert output.state.curator.sector == "반도체"
     assert output.state.user_request is not None
     assert output.state.user_request.target_corp_name == "SK하이닉스"
+
+
+def test_strategist_lowers_suitability_for_conservative_high_weight_user() -> None:
+    portfolio = Portfolio(
+        holdings=[
+            Holding(
+                stock_code="005930",
+                corp_name="삼성전자",
+                sector="반도체",
+                weight=0.75,
+                avg_price=70000,
+                qty=20,
+                current_price=78000,
+            )
+        ],
+        cash_weight=0.05,
+    )
+    conservative = UserProfile(
+        risk_tolerance="low",
+        investment_horizon_months=3,
+        max_drawdown_tolerance=-0.05,
+        liquidity_need_level="high",
+    )
+    aggressive = UserProfile(
+        risk_tolerance="high",
+        investment_horizon_months=24,
+        max_drawdown_tolerance=-0.2,
+        liquidity_need_level="low",
+    )
+
+    conservative_output = run_phase1_analysis(
+        "삼성전자 급등했는데 계속 가져가도 돼?",
+        user_profile=conservative,
+        portfolio=portfolio,
+    )
+    aggressive_output = run_phase1_analysis(
+        "삼성전자 급등했는데 계속 가져가도 돼?",
+        user_profile=aggressive,
+        portfolio=portfolio,
+    )
+
+    assert conservative_output.tier1.suitability < aggressive_output.tier1.suitability
+    assert any("리밸런싱" in action for action in conservative_output.state.strategist.next_actions)
+    assert any("급등" in action for action in conservative_output.state.strategist.next_actions)
