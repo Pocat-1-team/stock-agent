@@ -26,7 +26,7 @@ def _init_intake_state() -> None:
     st.session_state.setdefault("onboarding_step", 0)
     st.session_state.setdefault("onboarding_answers", {})
     st.session_state.setdefault("inferred_profile", None)
-    st.session_state.setdefault("cash_weight", 0.2)
+    st.session_state.setdefault("cash_amount", 0)
     st.session_state.setdefault("intake_portfolio", None)
     st.session_state.setdefault("intake_messages", [])
 
@@ -37,7 +37,7 @@ def _reset_intake() -> None:
         "onboarding_step",
         "onboarding_answers",
         "inferred_profile",
-        "cash_weight",
+        "cash_amount",
         "intake_portfolio",
         "analysis_output",
         "intake_messages",
@@ -141,16 +141,6 @@ def _render_portfolio_step(user_profile: UserProfile) -> Portfolio | None:
         st.info("후보 산업을 최소 1개 이상 선택해야 해서 전체 후보를 보여줍니다.")
 
     stock_names = get_stock_options(selected_sectors, limit=10)
-    with st.expander(f"선택 가능 후보 {len(stock_names)}개 보기"):
-        st.write(", ".join(stock_names))
-
-    cash_weight = st.slider(
-        "현금 비중",
-        min_value=0,
-        max_value=100,
-        value=round(st.session_state["cash_weight"] * 100),
-    ) / 100
-    st.session_state["cash_weight"] = cash_weight
 
     selected_holdings = []
     st.write("보유 수량")
@@ -172,6 +162,18 @@ def _render_portfolio_step(user_profile: UserProfile) -> Portfolio | None:
                     )
                 if qty > 0:
                     selected_holdings.append(build_holding_from_selection(corp_name, int(qty)))
+
+    holdings_value = sum(holding.market_value or 0 for holding in selected_holdings)
+    cash_amount = st.number_input(
+        "보유 현금",
+        min_value=0,
+        value=st.session_state["cash_amount"],
+        step=100000,
+        format="%d",
+    )
+    st.session_state["cash_amount"] = int(cash_amount)
+    total_assets = holdings_value + int(cash_amount)
+    cash_weight = int(cash_amount) / total_assets if total_assets > 0 else 0
 
     portfolio = Portfolio(
         holdings=build_holding_weights(selected_holdings),

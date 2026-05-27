@@ -194,7 +194,7 @@ Streamlit 메모리는 다음 key를 사용한다.
 |------|------|
 | 종목 | 후보 10개 고정 나열 |
 | 수량 | 종목별 number_input, 기본값 0 |
-| 현금 비중 | slider |
+| 보유 현금 | number_input |
 
 보조 입력으로 자연어 파서도 유지한다. CLI demo나 후속 채팅형 입력에서 사용할 수 있다.
 
@@ -236,7 +236,7 @@ Streamlit 메모리는 다음 key를 사용한다.
 | 총 평가금액 | `sum(current_price * qty)` |
 | 종목별 비중 | `holding.market_value / total_market_value` |
 | 섹터 비중 | `Portfolio.sector_weights()` |
-| 현금 비중 | `cash_weight` |
+| 현금 비중 | `cash_amount / (total_market_value + cash_amount)` |
 
 #### Step 5. 질문 분기
 
