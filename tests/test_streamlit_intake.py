@@ -18,6 +18,8 @@ def test_staged_intake_reaches_portfolio_step() -> None:
     _complete_onboarding(at)
 
     assert any("분석된 투자 성향" in widget.value for widget in at.subheader)
+    assert any("후보 산업" in widget.label for widget in at.multiselect)
+    assert any("입력할 보유 종목 개수" in widget.label for widget in at.number_input)
     assert any("종목 1" in widget.label for widget in at.selectbox)
     assert any(widget.label == "총 평가금액" for widget in at.metric)
 

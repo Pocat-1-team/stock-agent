@@ -131,11 +131,23 @@ def _render_profile_summary(user_profile: UserProfile) -> None:
 def _render_portfolio_step(user_profile: UserProfile) -> Portfolio | None:
     _render_profile_summary(user_profile)
     st.subheader("3. 보유 종목 입력")
-    st.caption("관심 산업의 시가총액 상위 후보 10개 안에서 종목을 고르고 수량만 입력해 주세요.")
+    st.caption("후보 산업을 고르면 시가총액 상위 후보 10개 안에서 종목을 선택할 수 있습니다.")
 
-    stock_names = get_stock_options(user_profile.preferred_sectors, limit=10)
+    selected_sectors = st.multiselect(
+        "후보 산업",
+        options=["반도체", "금융"],
+        default=user_profile.preferred_sectors or ["반도체", "금융"],
+    )
+    if not selected_sectors:
+        selected_sectors = ["반도체", "금융"]
+        st.info("후보 산업을 최소 1개 이상 선택해야 해서 전체 후보를 보여줍니다.")
+
+    stock_names = get_stock_options(selected_sectors, limit=10)
+    with st.expander(f"선택 가능 후보 {len(stock_names)}개 보기"):
+        st.write(", ".join(stock_names))
+
     holding_count = st.number_input(
-        "보유 종목 수",
+        "입력할 보유 종목 개수",
         min_value=1,
         max_value=5,
         value=st.session_state["selected_holding_count"],
