@@ -1,12 +1,8 @@
+from stock_agent.rag.retriever import retrieve_disclosures, retrieve_news
 from stock_agent.schemas.analysis import AgentState, QualResult
 
 
 def classify_event_types(texts: list[str]) -> list[str]:
-    """
-    뉴스/공시 근거 문장들을 기반으로 정성 이벤트 유형을 분류합니다.
-    현재는 mock RAG 단계이므로 keyword rule 기반으로 구현합니다.
-    이후 LLM 분류기 또는 RAG 결과 기반 분류기로 교체할 수 있습니다.
-    """
     joined_text = " ".join(texts)
 
     event_types = []
@@ -30,10 +26,6 @@ def classify_event_types(texts: list[str]) -> list[str]:
 
 
 def classify_sentiment(evidence: list[str], risks: list[str]) -> str:
-    """
-    긍정 근거와 리스크 개수를 바탕으로 간단한 sentiment를 산출합니다.
-    추후 뉴스 sentiment score 또는 LLM 판단 결과로 교체 가능합니다.
-    """
     if len(evidence) > len(risks):
         return "positive"
     if len(evidence) < len(risks):
@@ -42,10 +34,6 @@ def classify_sentiment(evidence: list[str], risks: list[str]) -> str:
 
 
 def calculate_qual_score(sentiment: str, evidence: list[str], risks: list[str]) -> int:
-    """
-    정성 분석 점수를 0~100 범위로 계산합니다.
-    현재는 단순 rule 기반 mock scoring입니다.
-    """
     base_score = 50
 
     if sentiment == "positive":
@@ -59,20 +47,70 @@ def calculate_qual_score(sentiment: str, evidence: list[str], risks: list[str]) 
     return max(0, min(100, base_score))
 
 
+def is_risk_text(text: str) -> bool:
+    risk_keywords = [
+        "리스크",
+        "불확실",
+        "감소",
+        "둔화",
+        "제한적",
+        "악화",
+        "부진",
+        "하락",
+        "규제",
+        "소송",
+        "적자",
+    ]
+
+    return any(keyword in text for keyword in risk_keywords)
+
+
+def format_doc_as_evidence(doc: dict) -> str:
+    title = doc.get("title") or doc.get("report_nm") or "제목 없음"
+    body = doc.get("body", "")
+    source = doc.get("publisher") or doc.get("source_url") or ""
+
+    if source:
+        return f"{title}: {body} (출처: {source})"
+
+    return f"{title}: {body}"
+
+
 def run_qual(state: AgentState) -> AgentState:
     if state.curator is None:
         raise ValueError("curator result is required before qualitative analysis")
 
+    ticker = getattr(state.curator, "ticker", None) or getattr(state.curator, "stock_code", None)
+    corp_code = getattr(state.curator, "corp_code", "")
+
+    news_docs = retrieve_news(
+        ticker=ticker,
+        query="최근 호재 악재 실적 산업 트렌드 신사업 리스크",
+        k=5,
+    )
+
+    disclosure_docs = retrieve_disclosures(
+        corp_code=corp_code,
+        query="최근 공시 사업보고서 리스크 신사업 실적",
+        k=3,
+    )
+
+    all_docs = news_docs + disclosure_docs
+
     evidence = [
-        "AI 서버 수요 확대가 고대역폭 메모리와 선단 공정 투자 기대를 높이고 있습니다.",
-        "최근 공시와 보도에서는 반도체 사이클 회복이 핵심 논점으로 반복됩니다.",
-        "모바일과 가전 수요는 회복 강도가 아직 제한적이라는 점이 함께 언급됩니다.",
+        format_doc_as_evidence(doc)
+        for doc in all_docs
+        if doc.get("body")
     ]
 
     risks = [
-        "뉴스/공시 RAG가 아직 mock이므로 실제 출처 기반 검증이 필요합니다.",
-        "업황 뉴스가 기대 중심일 경우 실적 확인 전까지 신뢰도를 보수적으로 봐야 합니다.",
+        format_doc_as_evidence(doc)
+        for doc in all_docs
+        if doc.get("body") and is_risk_text(doc["body"])
     ]
+
+    if not evidence:
+        evidence = ["뉴스 임베딩 검색 결과가 없어 정성 분석 근거가 부족합니다."]
 
     event_types = classify_event_types(evidence + risks)
     sentiment = classify_sentiment(evidence, risks)
