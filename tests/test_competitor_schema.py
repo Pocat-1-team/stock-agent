@@ -48,6 +48,7 @@ def test_competitor_result_keeps_existing_minimal_contract() -> None:
     assert result.data_quality_flags == []
     assert result.a1_peer_multiple_payload is None
     assert result.warnings == []
+
     assert result.evidence_cards == []
     assert result.bear_case is None
 

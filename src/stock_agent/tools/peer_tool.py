@@ -492,8 +492,7 @@ def load_financial_snapshots(
     return result
 
 
-<<<<<<< HEAD
-=======
+
 _MARKET_CAP_BAND_LOW = 0.25
 _MARKET_CAP_BAND_HIGH = 4.0
 
@@ -524,29 +523,12 @@ def _mark_outliers(rows: list[PeerMetricRow], target_stock_code: str) -> list[Pe
     return result
 
 
->>>>>>> main
 def select_peer_rows(
     target: PeerMetricRow,
     rows: list[PeerMetricRow],
     max_peer_count: int,
 ) -> list[PeerMetricRow]:
-<<<<<<< HEAD
-    def market_cap_distance(row: PeerMetricRow) -> float:
-        if target.market_cap is None or row.market_cap is None:
-            return float("inf")
-        return abs(row.market_cap - target.market_cap)
 
-    peers = [row for row in rows if row.stock_code != target.stock_code]
-    return sorted(
-        peers,
-        key=lambda row: (
-            -row.data_quality_score,
-            market_cap_distance(row),
-            row.corp_name,
-            row.stock_code,
-        ),
-    )[:max_peer_count]
-=======
     candidates = [row for row in rows if row.stock_code != target.stock_code]
 
     if target.market_cap is not None:
@@ -567,7 +549,6 @@ def select_peer_rows(
         return (-row.data_quality_score, gap)
 
     return sorted(candidates, key=sort_key)[:max_peer_count]
->>>>>>> main
 
 
 def build_peer_summary(
@@ -686,11 +667,9 @@ def build_peer_comparison(
         )
 
     target_row = metric_rows[0]
-<<<<<<< HEAD
-=======
+
     metric_rows = _mark_outliers(metric_rows, target_row.stock_code)
     target_row = metric_rows[0]
->>>>>>> main
     selected_peers = select_peer_rows(target_row, metric_rows, max_peer_count=max_peer_count)
 
     if len(selected_peers) < min_peer_count:

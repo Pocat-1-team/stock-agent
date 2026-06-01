@@ -164,6 +164,7 @@ def test_select_peer_rows_excludes_target_and_prefers_quality_then_market_cap_pr
         stock_code="CCC001",
         corp_name="High Quality Far",
         sector="semiconductor",
+
         market_cap=3_500,  # 3.5x — within 0.25x~4x band
         data_quality_score=90,
     )
@@ -384,6 +385,7 @@ def test_build_peer_comparison_limits_score_when_no_peers(monkeypatch) -> None:
     assert "sector_missing" in comparison.warnings
     assert "peer_count_below_minimum" in comparison.warnings
     assert "no_comparable_peers" in comparison.data_quality_flags
+
 
 
 def test_select_peer_rows_filters_by_market_cap_band() -> None:

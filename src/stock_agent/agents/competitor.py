@@ -20,6 +20,7 @@ except ModuleNotFoundError as exc:
         raise RuntimeError("psycopg is required to connect to the DB.")
 
 
+
 _PROMPT_PATH = Path(__file__).resolve().parents[1] / "prompts" / "competitor" / "system.md"
 
 _narrative_cache: dict[str, dict[str, Any]] = {}
@@ -42,6 +43,7 @@ def _is_expected_fallback_error(exc: Exception) -> bool:
         return True
     error_text = f"{exc.__class__.__name__}: {exc}".lower()
     return any(marker in error_text for marker in _DB_FALLBACK_MARKERS)
+
 
 
 def _load_system_prompt() -> str:
@@ -271,6 +273,9 @@ def run_competitor(state: AgentState) -> AgentState:
                 stock_code=state.curator.stock_code,
                 sector=state.curator.sector,
             )
+
+        state.competitor = _result_from_comparison(comparison)
+
         base_result = _result_from_comparison(comparison)
         narrative = _generate_narrative(comparison)
         state.competitor = _apply_narrative(base_result, narrative)
