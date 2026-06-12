@@ -59,16 +59,48 @@ def _get_value(indicators: dict, name: str) -> float | None:
     return None
 
 
-def _calc_roc(indicators_current: dict, indicators_prev: dict, name: str) -> float | None:
+def _calc_roc(
+    indicators_current: dict,
+    indicators_prev: dict,
+    name: str,
+    max_days: int = 95,
+) -> float | None:
     """
     변화율(Rate of Change) 계산.
     출처: Miyazaki et al. (2026) arXiv:2602.23330
-    데이터 부족 시 None 반환 → RoC 보정 건너뜀
+
+    Args:
+        max_days: 두 시점 간격이 이 값을 초과하면 RoC 계산 생략.
+                  기본값 95일 = 분기(90일) + 여유 5일.
+                  지표별 발표 주기 불일치로 인한 타임프레임 왜곡 방지.
+
+    TODO Phase 2: 지표별 이종 주기(Heterogeneous Frequency) 정렬
+    - 현재: 단순 직전값 대비 RoC (주기 불일치 문제 있음)
+    - 개선: Window Function으로 최신 2개 레코드 단일 쿼리 조회
+      + CPI  → YoY(전년동기비) 별도 윈도우
+      + GDP  → RoC 계산 생략 (이미 전년동기비 값)
+      + 금리 → bp 차이 사용
+    - Issue: "매크로 지표별 이종 주기 정렬을 위한 쿼리 고도화"
     """
     cur = _get_value(indicators_current, name)
     prv = _get_value(indicators_prev, name)
     if cur is None or prv is None or prv == 0:
         return None
+
+    # 날짜 간격 체크 — 주기 불일치 방지 (Guard Clause)
+    cur_date = indicators_current.get(name, {}).get("observed_at") if isinstance(indicators_current.get(name), dict) else None
+    prv_date = indicators_prev.get(name, {}).get("observed_at") if isinstance(indicators_prev.get(name), dict) else None
+    if cur_date and prv_date:
+        try:
+            diff = abs((
+                datetime.fromisoformat(str(cur_date)) -
+                datetime.fromisoformat(str(prv_date))
+            ).days)
+            if diff > max_days:
+                return None  # 간격 초과 → RoC 계산 생략
+        except (ValueError, TypeError):
+            return None
+
     return round((cur - prv) / abs(prv) * 100, 2)
 
 
@@ -76,6 +108,15 @@ def _fetch_prev_context(conn, sector: str | None, as_of_date: str) -> dict | Non
     """
     RoC 계산을 위한 이전 시점 데이터 조회.
     실패 시 None 반환 → RoC 보정 없이 Level 기반 점수만 사용.
+
+    TODO Phase 2: 현재 지표별 loop 쿼리 → Window Function 단일 쿼리로 교체
+    WITH RankedMacro AS (
+        SELECT indicator_code, observed_at, payload,
+               ROW_NUMBER() OVER (PARTITION BY indicator_code ORDER BY observed_at DESC) as rn
+        FROM raw_macro
+        WHERE observed_at <= %s AND indicator_code IN (...)
+    )
+    SELECT * FROM RankedMacro WHERE rn <= 2;
     """
     try:
         from psycopg2.extras import RealDictCursor
@@ -101,9 +142,12 @@ def _fetch_prev_context(conn, sector: str | None, as_of_date: str) -> dict | Non
                 row = cur.fetchone()
                 name = INDICATOR_NAMES.get(code, code)
                 if row:
-                    indicators[name] = {"value": row["payload"].get("value")}
+                    indicators[name] = {
+                        "value":       row["payload"].get("value"),
+                        "observed_at": str(row["observed_at"]),
+                    }
                 else:
-                    indicators[name] = {"value": None}
+                    indicators[name] = {"value": None, "observed_at": None}
         return {"indicators": indicators}
     except Exception:
         return None
@@ -115,13 +159,21 @@ def run_macro(state: AgentState) -> AgentState:
 
     - 금리 / 인플레이션 / 경제성장 / 시장 4개 영역 점수화
     - 업종별 환율·금리 민감도 가중치 적용
-    - 변화율(RoC) 추세 보정 (데이터 부족 시 생략)
+    - 변화율(RoC) 추세 보정 (데이터 부족 또는 주기 불일치 시 생략)
     - DB 실패 시 mock fallback으로 파이프라인 유지
 
     논문 근거:
         Miyazaki et al. (2026). arXiv:2602.23330
         Yang et al. (2018). Applied Economics 50(7)
         PLOS ONE (2024). 한국 섹터별 거시경제 영향
+
+    TODO Phase 2:
+        1. Z-Score 기반 점수 계산 (절대값 threshold 대신)
+           - 최근 3년 시계열 기준 Z-Score 반영
+           - get_macro_history() 함수 추가 필요
+        2. 지표별 이종 주기 정렬 쿼리 고도화
+           - Window Function 단일 쿼리로 레이턴시 개선
+           - CPI(YoY), GDP(RoC 생략), 금리(bp 차이) 별도 처리
     """
     # ── 1. 이전 에이전트 결과 확인 ───────────────────────────
     if state.curator is None:
@@ -163,6 +215,7 @@ def run_macro(state: AgentState) -> AgentState:
 
     # ── 4. 점수 계산 ─────────────────────────────────────────
     # 출처: Miyazaki et al. (2026) 4영역 0~100점 구조
+    # TODO Phase 2: 절대값 threshold → Z-Score 기반으로 개선
     score   = 50
     reasons: list[str] = []
     risks:   list[str] = []
@@ -191,6 +244,7 @@ def run_macro(state: AgentState) -> AgentState:
 
     # [영역 3] 경제성장 평가
     # 출처: Miyazaki et al. (2026) — GDP 성장 = 긍정
+    # GDP 지표는 이미 전년동기비 값이므로 RoC 계산 생략
     gdp = val("실질 GDP 성장률 (전년동기비)")
     if gdp is not None:
         if gdp >= 2.0:
@@ -232,13 +286,17 @@ def run_macro(state: AgentState) -> AgentState:
 
     # [RoC 보정] 변화율 추세 반영
     # 출처: Miyazaki et al. (2026) — Level + RoC 동시 분석
-    # 데이터 부족 시 건너뜀
+    # 데이터 부족 또는 주기 불일치(max_days 초과) 시 자동 생략
     rate_of_change: dict[str, float | None] = {}
     if prev_context and prev_context.get("indicators"):
         prev_indicators = prev_context["indicators"]
-        roc_rate = _calc_roc(indicators_raw, prev_indicators, "한국은행 기준금리")
-        roc_cpi  = _calc_roc(indicators_raw, prev_indicators, "소비자물가지수 (CPI)")
-        roc_gdp  = _calc_roc(indicators_raw, prev_indicators, "실질 GDP 성장률 (전년동기비)")
+
+        # 금리: 비정기 발표 → max_days=200 (통방위 간격 최대 약 6개월)
+        roc_rate = _calc_roc(indicators_raw, prev_indicators, "한국은행 기준금리", max_days=200)
+        # CPI: 월별 → max_days=45 (1개월 + 여유)
+        roc_cpi  = _calc_roc(indicators_raw, prev_indicators, "소비자물가지수 (CPI)", max_days=45)
+        # GDP: 이미 전년동기비 값 → RoC 계산 생략 (성장률의 성장률 방지)
+        roc_gdp  = None
 
         rate_of_change = {
             "기준금리_RoC":  roc_rate,
