@@ -1,6 +1,26 @@
-from stock_agent.rag.retriever import retrieve_disclosures, retrieve_news
 from stock_agent.schemas.analysis import AgentState, QualResult
 
+
+def fallback_news_docs(ticker: str | None) -> list[dict]:
+    return [
+        {
+            "title": "뉴스 검색 fallback",
+            "body": "뉴스 DB 또는 임베딩 모델 연결 실패로 실제 뉴스 검색을 수행하지 못했습니다.",
+            "publisher": "mock",
+            "stock_code": ticker or "",
+        }
+    ]
+
+
+def fallback_disclosure_docs(corp_code: str | None) -> list[dict]:
+    return [
+        {
+            "report_nm": "공시 검색 fallback",
+            "body": "공시 DB 또는 임베딩 모델 연결 실패로 실제 공시 검색을 수행하지 못했습니다.",
+            "source_url": "mock",
+            "corp_code": corp_code or "",
+        }
+    ]
 
 def classify_event_types(texts: list[str]) -> list[str]:
     joined_text = " ".join(texts)
@@ -83,17 +103,30 @@ def run_qual(state: AgentState) -> AgentState:
     ticker = getattr(state.curator, "ticker", None) or getattr(state.curator, "stock_code", None)
     corp_code = getattr(state.curator, "corp_code", "")
 
-    news_docs = retrieve_news(
-        ticker=ticker,
-        query="최근 호재 악재 실적 산업 트렌드 신사업 리스크",
-        k=5,
-    )
+    try:
+        from stock_agent.rag.retriever import retrieve_news
 
-    disclosure_docs = retrieve_disclosures(
-        corp_code=corp_code,
-        query="최근 공시 사업보고서 리스크 신사업 실적",
-        k=3,
-    )
+        news_docs = retrieve_news(
+            ticker=ticker,
+            query="최근 호재 악재 실적 산업 트렌드 신사업 리스크",
+            k=5,
+        )
+    except Exception as exc:
+        print(f"[Qual] retrieve_news failed. Using fallback news docs: {exc}")
+        news_docs = fallback_news_docs(ticker)
+
+
+    try:
+        from stock_agent.rag.retriever import retrieve_disclosures
+
+        disclosure_docs = retrieve_disclosures(
+            corp_code=corp_code,
+            query="최근 공시 사업보고서 리스크 신사업 실적",
+            k=3,
+        )
+    except Exception as exc:
+        print(f"[Qual] retrieve_disclosures failed. Using fallback disclosure docs: {exc}")
+        disclosure_docs = fallback_disclosure_docs(corp_code)
 
     all_docs = news_docs + disclosure_docs
 
