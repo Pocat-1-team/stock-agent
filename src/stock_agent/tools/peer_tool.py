@@ -705,3 +705,128 @@ def build_peer_comparison(
         a1_peer_multiple_payload=position.a1_peer_multiple_payload,
         warnings=warnings,
     )
+
+
+# 실시간 시세 출처를 가리키는 데이터 품질 마커. guardrail.mock_data_audit가 mock으로
+# 오판하지 않도록 "mock"/"fallback"/"데모용" 문자열을 의도적으로 배제한다(실데이터이므로).
+MCP_LIVE_SOURCE_FLAG = "mcp_live_market_data"
+MCP_DB_UNAVAILABLE_FLAG = "db_unavailable_used_mcp"
+
+
+def _metric_row_from_market_record(record: dict[str, Any]) -> PeerMetricRow:
+    """MCP 실시간 지표 레코드(per/pbr/roe/market_cap 등)를 PeerMetricRow로 변환한다.
+
+    DART 재무가 없는 폴백 경로이므로 매출성장률·영업이익률·부채비율은 결측으로 두고
+    그에 맞는 metric_flags를 부여한다(정직한 데이터 품질 신호).
+    """
+    per = record.get("per")
+    pbr = record.get("pbr")
+    roe = record.get("roe")
+    market_cap = _as_int(record.get("market_cap"))
+    close_price = _as_int(record.get("close_price"))
+
+    flags: list[str] = []
+    if per is None:
+        flags.append("per_not_applicable")
+    if pbr is None:
+        flags.append("pbr_not_applicable")
+    if roe is None:
+        flags.append("roe_missing")
+    # 폴백 경로에서 항상 결측인 재무 파생 지표
+    flags.extend(["revenue_growth_missing", "operating_margin_missing", "debt_ratio_missing"])
+
+    quality = _quality_score([market_cap, close_price, per, pbr, roe])
+
+    return PeerMetricRow(
+        corp_code=str(record.get("corp_code") or ""),
+        stock_code=str(record["stock_code"]),
+        corp_name=str(record.get("corp_name") or record["stock_code"]),
+        sector=record.get("sector"),
+        base_date=str(record["base_date"]) if record.get("base_date") else None,
+        market_cap=market_cap,
+        close_price=close_price,
+        per=rounded(per, 4) if per is not None else None,
+        pbr=rounded(pbr, 4) if pbr is not None else None,
+        roe=rounded(roe, 4) if roe is not None else None,
+        revenue_growth=None,
+        operating_margin=None,
+        debt_ratio=None,
+        data_quality_score=quality,
+        metric_flags=flags,
+    )
+
+
+def build_comparison_from_market_rows(
+    target_stock_code: str,
+    records: list[dict[str, Any]],
+    sector: str | None = None,
+    base_date: str | None = None,
+    min_peer_count: int = 3,
+    max_peer_count: int = 8,
+) -> PeerComparison:
+    """MCP 실시간 시세 레코드로부터 PeerComparison을 만든다(DB 없이, 순수 함수).
+
+    `build_peer_comparison`의 DB 로더 대신 외부 시세 레코드를 입력으로 받아 동일한 점수·상대위치
+    엔진(select_peer_rows·calculate_relative_position)을 재사용한다. DB 미연결 폴백 전용 경로다.
+    """
+    warnings: list[str] = [MCP_DB_UNAVAILABLE_FLAG]
+
+    target_records = [r for r in records if str(r.get("stock_code")) == target_stock_code]
+    if not target_records:
+        message = f"{target_stock_code} 종목의 실시간 시세를 MCP 경로에서 확보하지 못했습니다."
+        return PeerComparison(
+            target=_missing_target_row(target_stock_code),
+            peers=[],
+            score=0,
+            peer_selection_summary=message,
+            peer_summary=message,
+            metric_definitions=metric_definitions(),
+            relative_position={},
+            evidence=[message],
+            data_quality_flags=_dedupe(["target_not_found", MCP_DB_UNAVAILABLE_FLAG]),
+            warnings=_dedupe(["target_not_found", *warnings]),
+        )
+
+    metric_rows = [_metric_row_from_market_record(r) for r in records]
+    # 대상이 항상 첫 행이 되도록 정렬
+    metric_rows.sort(key=lambda row: 0 if row.stock_code == target_stock_code else 1)
+
+    metric_rows = _mark_outliers(metric_rows, target_stock_code)
+    target_row = next(row for row in metric_rows if row.stock_code == target_stock_code)
+    selected_peers = select_peer_rows(target_row, metric_rows, max_peer_count=max_peer_count)
+
+    if not selected_peers:
+        warnings.append("no_comparable_peers")
+    if len(selected_peers) < min_peer_count:
+        warnings.append("peer_count_below_minimum")
+
+    position = calculate_relative_position([target_row, *selected_peers], target_row.stock_code)
+    warnings = _dedupe(warnings)
+    data_quality_flags = _dedupe([MCP_LIVE_SOURCE_FLAG, *position.data_quality_flags, *warnings])
+
+    base_label = base_date or target_row.base_date or "최근 영업일"
+    peer_selection_summary = (
+        f"DB 미연결로 MCP 실시간 시세 경로를 사용했습니다. {sector or '대상'} 비교군 후보 "
+        f"{len(records) - 1}개 중 시가총액 근접도 기준으로 {len(selected_peers)}개를 선택했습니다."
+    )
+
+    evidence = [
+        f"MCP 실시간 시세({base_label}) 기준으로 peer 비교를 수행했습니다.",
+        *position.evidence,
+        f"비교군은 최종 {len(selected_peers)}개 peer로 구성했습니다.",
+        "DART 재무 기반 매출성장률·영업이익률·부채비율은 이 경로에서 제공되지 않아 결측 처리했습니다.",
+    ]
+
+    return PeerComparison(
+        target=target_row,
+        peers=selected_peers,
+        score=position.score,
+        peer_selection_summary=peer_selection_summary,
+        peer_summary=build_peer_summary(target_row, len(selected_peers), data_quality_flags),
+        metric_definitions=metric_definitions(),
+        relative_position=position.relative_position,
+        evidence=evidence,
+        data_quality_flags=data_quality_flags,
+        a1_peer_multiple_payload=position.a1_peer_multiple_payload,
+        warnings=warnings,
+    )
