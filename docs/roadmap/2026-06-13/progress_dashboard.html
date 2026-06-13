@@ -343,13 +343,15 @@
     <section class="hero">
       <div class="card">
         <p class="section-label">2026-06-13 EOD · 강사 재검토 이후 코드 진척 반영</p>
-        <h1>강사 재검토 6대 피드백 중 4개를 코드로 닫았다 — 남은 건 LangGraph와 오픈웨이트 sLLM 두 레버</h1>
+        <h1>강사 재검토 핵심 피드백은 일부 해소 — 남은 건 LangGraph, 오픈웨이트 sLLM, Qual RAG 고도화</h1>
         <p class="lede">
           강사 공식 재검토는 커밋 <strong>93487d3</strong> 기준 <strong>32/70 · D등급</strong>입니다(점수 자체는 다음 재검토 전까지 불변).
-          그러나 그 이후 main(<strong>4790f2d</strong>)에 <strong>Qual·Strategist 폴백 복원(#51·#52), Guardrail 실게이팅(#50),
-          Macro 파이프라인 연결(#49), Competitor MCP 실시간 시세(#56)</strong>가 머지되어
-          <strong>P0 2건 포함 6대 피드백 중 4건이 코드상 해소</strong>됐습니다.
-          이제 가중 ×2 핵심 차별축인 <strong>LangGraph 오케스트레이션(#1)·오픈웨이트 sLLM(#3)</strong> 두 가지가 점수의 거의 전부를 좌우합니다.
+          그러나 그 이후 main(<strong>143a6e8</strong>)에 <strong>Qual·Strategist 폴백 복원(#51·#52), Guardrail 실게이팅(#50),
+          Macro 파이프라인 연결(#49), Competitor MCP 최소 실동작(#56·#59), RAGAS context precision(#60),
+          ERD 코드 정합(#64)</strong>이 머지되어
+          <strong>폴백·게이팅·Macro·MCP 최소경로는 코드상 진전</strong>됐습니다.
+          다만 가중 ×2 핵심 차별축인 <strong>LangGraph 오케스트레이션(#1)·오픈웨이트 sLLM(#3)</strong>은 아직 미완료이고,
+          도예님 담당 범위의 <strong>Hybrid/Reranker 기반 Qual RAG 고도화(#9)</strong>도 다음 재검토 점수 상승의 선행 작업입니다.
         </p>
         <div class="score-journey">
           <div class="score-step step-report">
@@ -381,18 +383,18 @@
         <h2 style="font-size:15px; font-weight:700;">이번 대시보드 기준</h2>
         <div class="pill-row">
           <span class="pill">강사 재검토 93487d3</span>
-          <span class="pill">코드 기준 main 4790f2d</span>
+          <span class="pill">코드 기준 main 143a6e8</span>
           <span class="pill">GitHub 협업자 5명</span>
         </div>
         <dl>
-          <div class="stat"><dt>코드 해소(재검토 후)</dt><dd>4건</dd></div>
-          <div class="stat"><dt>남은 핵심 레버</dt><dd>2건</dd></div>
+          <div class="stat"><dt>코드 진전(재검토 후)</dt><dd>5건</dd></div>
+          <div class="stat"><dt>남은 핵심 레버</dt><dd>3건</dd></div>
           <div class="stat"><dt>에이전트 모듈</dt><dd>10</dd></div>
           <div class="stat"><dt>미배정 과제</dt><dd>2</dd></div>
         </dl>
         <p style="margin-top:12px; font-size:12px; color:var(--muted);">
-          공식 점수(32)는 강사 재검토 결과만 사용합니다. 이후 머지된 폴백·게이팅·Macro·MCP는
-          <strong>"코드상 해소, 재검증 대기"</strong>로 표시하며 점수 상승은 다음 강사 재검토 전까지 확정하지 않습니다.
+          공식 점수(32)는 강사 재검토 결과만 사용합니다. 이후 머지된 폴백·게이팅·Macro·MCP·RAGAS 보강은
+          <strong>"코드상 진전, 재검증 대기"</strong>로 표시하며 점수 상승은 다음 강사 재검토 전까지 확정하지 않습니다.
         </p>
       </aside>
     </section>
@@ -419,7 +421,7 @@
     <section id="agents">
       <p class="section-label">Agent Readiness</p>
       <h2 class="section-title">에이전트별 구현 현황</h2>
-      <p class="section-desc">에이전트 코드 존재 여부보다 파이프라인 연결과 강사 채점 가능한 실동작을 더 크게 반영했습니다. 06-13 EOD 코드(main 4790f2d) 기준입니다.</p>
+      <p class="section-desc">에이전트 코드 존재 여부보다 파이프라인 연결과 강사 채점 가능한 실동작을 더 크게 반영했습니다. 06-13 EOD 코드(main 143a6e8) 기준입니다.</p>
       <div class="toolbar" aria-label="에이전트 상태 필터">
         <button class="filter-button active" type="button" data-filter="all">전체</button>
         <button class="filter-button" type="button" data-filter="strong">강점</button>
@@ -442,8 +444,8 @@
 
     <section id="feedback">
       <p class="section-label">Instructor Feedback</p>
-      <h2 class="section-title">집중 피드백 — 해소분과 남은 레버</h2>
-      <p class="section-desc">강사 6대 피드백을 06-13 EOD 코드 기준으로 재분류했습니다. 초록 카드는 코드상 해소(재검증 대기), 빨강·주황 카드는 남은 작업입니다.</p>
+      <h2 class="section-title">집중 피드백 — 진전분과 남은 레버</h2>
+      <p class="section-desc">강사 핵심 피드백을 06-13 EOD 코드 기준으로 재분류했습니다. 초록 카드는 코드상 진전(재검증 대기), 빨강·주황 카드는 남은 작업입니다.</p>
       <div class="focus-grid">
         <article class="focus-card done">
           <h3><span class="tag tag-done">해소</span> Qual·Strategist 폴백 복원</h3>
@@ -461,9 +463,9 @@
           <ul><li>해소 근거: #49(Macro 연결 + 가중치)</li><li>남은 일: Macro 실데이터 폭 확대</li></ul>
         </article>
         <article class="focus-card done">
-          <h3><span class="tag tag-done">해소</span> MCP 최소 실동작(#6)</h3>
+          <h3><span class="tag tag-done">진전</span> MCP 최소 실동작(#6)</h3>
           <p>Competitor DB 미연결 폴백이 <code>mcp_bridge</code>의 FastMCP 서버(<code>sector_roster</code>·<code>market_metrics</code> Tool)를 in-process 호출해 pykrx 실시간 시세 peer 비교를 확보합니다.</p>
-          <ul><li>해소 근거: #56(Competitor MCP). 루브릭 #6 0→~1</li><li>남은 일: stdio 핸드셰이크 시연 캡처</li></ul>
+          <ul><li>진전 근거: #56·#59(Competitor MCP). 루브릭 #6 0→~1~2 후보</li><li>남은 일: Competitor 외 에이전트 적용 가능성 검토 또는 A2A 대체 설계 명시</li></ul>
         </article>
         <article class="focus-card high">
           <h3><span class="tag tag-risk">P0 잔여</span> 오픈웨이트 sLLM 실호출</h3>
@@ -505,8 +507,8 @@
         </article>
         <article class="unassigned-card">
           <h3><span class="badge badge-strong">진행중</span> #6 MCP 확장</h3>
-          <p>Competitor in-process MCP는 동작 확정. 다음은 stdio 서버 분리 + 다른 에이전트의 Tool 소비로 확장.</p>
-          <ul><li>현재: 0→~1 확보</li><li>추천 파트: 데이터 Tool 담당(이동원)</li></ul>
+          <p>Competitor MCP tools/list와 call_tool round-trip은 동작 확인. 아직 각 에이전트별 적용은 아니므로 확장 또는 A2A 대체 근거가 필요합니다.</p>
+          <ul><li>현재: 0→~1~2 후보</li><li>추천 파트: 데이터 Tool 담당 + 각 에이전트 오너 검토</li></ul>
         </article>
       </div>
     </section>
@@ -519,14 +521,14 @@
           <div class="tl-rail"><div class="tl-dot">✓</div><div class="tl-line"></div></div>
           <div class="tl-body">
             <h3>파이프라인 안정성 복원 <span class="tag tag-done">완료</span></h3>
-            <p>Qual·Strategist 폴백(#51·#52), Guardrail 게이팅(#50), Macro 연결(#49), Competitor MCP(#56)가 main에 머지됨. 다음 강사 재검토 전까지 점수는 비공식.</p>
+            <p>Qual·Strategist 폴백(#51·#52), Guardrail 게이팅(#50), Macro 연결(#49), Competitor MCP(#56·#59)가 main에 머지됨. 다음 강사 재검토 전까지 점수는 비공식.</p>
           </div>
         </div>
         <div class="tl-item current">
           <div class="tl-rail"><div class="tl-dot">P0</div><div class="tl-line"></div></div>
           <div class="tl-body">
             <h3>가중 ×2 핵심 레버 <span class="tag tag-risk">최대 효과</span></h3>
-            <p>오픈웨이트 sLLM 실호출(#3)과 LangGraph fan-out(#1)을 완료합니다. 이 둘만 제대로 처리해도 가중점 +6~8로 C~B 진입이 현실적(강사 진단).</p>
+            <p>오픈웨이트 sLLM 실호출(#3)과 LangGraph fan-out(#1)을 완료합니다. 이 둘은 가중 ×2라 여전히 가장 큰 점수 레버입니다.</p>
           </div>
         </div>
         <div class="tl-item">
@@ -551,7 +553,7 @@
       <h2 class="section-title">근거와 해석 범위</h2>
       <div class="card source-list">
         <div class="source-row"><strong>공식 점수</strong><span><a href="../../feedback/2026-06-13_강사재검토리포트_93487d3.md">강사 재검토 리포트 93487d3</a> · 32/70(D), Full 동적 검증</span></div>
-        <div class="source-row"><strong>코드 기준</strong><span><code>main@4790f2d</code> · #49 Macro·#50 Guardrail·#51 Strategist·#52 Qual·#56 Competitor MCP 머지 포함</span></div>
+        <div class="source-row"><strong>코드 기준</strong><span><code>main@143a6e8</code> · #49 Macro·#50 Guardrail·#51 Strategist·#52 Qual·#56/#59 Competitor MCP·#60 RAGAS context precision·#62 Peer 선정·#63 CI 충돌 게이트·#64 ERD 정합·#65 대시보드 갱신 포함</span></div>
         <div class="source-row"><strong>이전 대시보드</strong><span><a href="../2026-06-12/progress_dashboard.html">2026-06-12 progress_dashboard.html</a> (강사 재검토 직후 스냅샷)</span></div>
         <div class="source-row"><strong>담당자 기준</strong><span>GitHub 협업자 5명과 파일별 기여 이력 기반 추정. 최종 배정은 PM·팀 합의가 우선입니다.</span></div>
       </div>
@@ -559,7 +561,7 @@
 
     <footer>
       stock-agent · 팀 작업 현황 대시보드 · 기준일 2026-06-13 EOD (KST)<br />
-      공식 점수(32/70)는 강사 재검토 확정값이며, 이후 머지분은 "코드상 해소·재검증 대기"로 분리 표기했습니다.
+      공식 점수(32/70)는 강사 재검토 확정값이며, 이후 머지분은 "코드상 진전·재검증 대기"로 분리 표기했습니다.
     </footer>
   </main>
 
