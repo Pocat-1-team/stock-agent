@@ -28,6 +28,8 @@
 
 ## 현재 상태
 
-- `peer_tool.py`는 Competitor Agent의 실제 경로로 연결되어 있고, DB 연결 실패 시 Competitor Agent가 mock fallback으로 전환합니다 (`agents/competitor.py`).
+- `peer_tool.py`는 Competitor Agent의 실제 경로로 연결되어 있고, **DB 연결 실패 시 폴백 우선순위는 ① MCP 실시간 시세(실데이터) → ② 하드코딩 mock(최후 보루)** 입니다 (`agents/competitor.py`).
+  - ①은 `src/stock_agent/mcp_bridge/`의 자체 FastMCP 서버를 in-process로 호출해 pykrx 시세 기반 peer 비교를 만듭니다(루브릭 #6 "실동작 1경로"). 상세는 [`mcp_bridge/README.md`](../mcp_bridge/README.md) 참고.
+  - `peer_tool.build_comparison_from_market_rows`가 DB 없이 외부 시세 레코드로 동일한 점수·상대위치 엔진을 재사용합니다(기존 DB 로더 함수 시그니처는 무변경 — monkeypatch 계약 유지).
 - `peer_tool.py`의 순수 계산 함수(`calculate_metric_row`, `calculate_relative_position`, `select_peer_rows` 등)는 DB 없이 단위 테스트 가능하며, `tests/tools/test_peer_tool.py`에서 검증합니다.
 - Competitor의 LLM narrative는 `llm/openrouter_client.py`를 통해 호출하며, 일시적 장애(429·5xx·네트워크 오류)에 한해 최대 2회 재시도합니다. 수치는 LLM이 만들지 않고 Tool 계산 결과를 해석만 합니다.

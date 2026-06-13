@@ -439,6 +439,48 @@ def test_select_peer_rows_keeps_all_when_target_has_no_market_cap() -> None:
     assert len(selected) == 2
 
 
+def _market_records() -> list[dict]:
+    return [
+        {"stock_code": "AAA001", "corp_name": "Target", "base_date": "20260612",
+         "market_cap": 1_000_000, "close_price": 70000, "per": 18.0, "pbr": 1.3, "roe": 0.11},
+        {"stock_code": "BBB001", "corp_name": "Peer B", "base_date": "20260612",
+         "market_cap": 1_100_000, "close_price": 60000, "per": 12.0, "pbr": 1.0, "roe": 0.14},
+        {"stock_code": "CCC001", "corp_name": "Peer C", "base_date": "20260612",
+         "market_cap": 900_000, "close_price": 50000, "per": 20.0, "pbr": 1.5, "roe": 0.09},
+    ]
+
+
+def test_build_comparison_from_market_rows_scores_with_live_data() -> None:
+    comparison = peer_tool.build_comparison_from_market_rows(
+        target_stock_code="AAA001",
+        records=_market_records(),
+        sector="반도체",
+        base_date="20260612",
+    )
+
+    assert comparison.target.stock_code == "AAA001"
+    assert [row.stock_code for row in comparison.peers] == ["BBB001", "CCC001"]
+    assert comparison.score >= 0
+    # 실데이터 출처 마커가 있고, mock 오판 단어는 없어야 한다.
+    assert peer_tool.MCP_LIVE_SOURCE_FLAG in comparison.data_quality_flags
+    joined = " ".join(comparison.data_quality_flags + comparison.warnings).lower()
+    assert "mock" not in joined
+    assert "데모용" not in joined
+    # DART 파생 지표는 결측 처리되어야 한다.
+    assert comparison.target.revenue_growth is None
+    assert "revenue_growth_missing" in comparison.target.metric_flags
+
+
+def test_build_comparison_from_market_rows_handles_missing_target() -> None:
+    comparison = peer_tool.build_comparison_from_market_rows(
+        target_stock_code="ZZZ999",
+        records=_market_records(),
+    )
+    assert comparison.score == 0
+    assert comparison.peers == []
+    assert "target_not_found" in comparison.data_quality_flags
+
+
 def test_mark_outliers_flags_extreme_values() -> None:
     from stock_agent.tools.peer_tool import PeerMetricRow, _mark_outliers
 
