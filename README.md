@@ -430,7 +430,8 @@ PM이 주로 관리하는 문서들:
 | `docs/architecture/backtesting_demo_dashboard.html` | 발표 자료와 스크린샷에 바로 쓸 수 있는 백테스팅 검증 아키텍처 HTML 시각화 | PM·전원 |
 | `docs/functional-spec/demo/D1_backtesting_validation_spec_v0.1.md` | 중간 시연용 백테스팅 검증 모드 기능 명세 | 개발팀·PM |
 | `docs/roadmap/<날짜>/roadmap_dashboard.html` | 주간 진행 현황·완료/할 일·의사결정을 한 화면에서 보는 인터랙티브 로드맵 대시보드 (예: `docs/roadmap/2026-05-23/`) | 전원 |
-| `docs/roadmap/2026-06-12/progress_dashboard.html` | 강사님 재검토 공식 점수와 팀원별 파트·에이전트별 구현도·집중 피드백·미배정 과제를 추적하는 인터랙티브 작업 현황 대시보드 | 전원 |
+| `docs/roadmap/2026-06-12/progress_dashboard.html` | 강사님 재검토 공식 점수와 팀원별 파트·에이전트별 구현도·집중 피드백·미배정 과제를 추적하는 인터랙티브 작업 현황 대시보드 (재검토 직후 스냅샷) | 전원 |
+| `docs/roadmap/2026-06-13/progress_dashboard.html` | **최신** — 강사 재검토 이후 머지(Qual·Strategist 폴백 #51·#52, Guardrail 게이팅 #50, Macro 연결 #49, Competitor MCP #56)를 반영해 6대 피드백 중 4건 해소·남은 ×2 레버(LangGraph·sLLM)를 강조한 EOD 대시보드 | 전원 |
 | `docs/guides/2026-06-13/streamlit_usage_guide.html` | Streamlit UI 실행·테스트 사용 가이드 — 실제 화면 스크린샷 6장과 단계별 설명, FAQ 포함 | 전원 (특히 신규 팀원) |
 | `docs/architecture/erd.md` | DB ERD | 데이터팀·백엔드 |
 | `docs/architecture/agent_design.md` | 6 에이전트 상세 설계 | 에이전트 담당 |
@@ -483,6 +484,7 @@ docker compose --profile app run --rm app python scripts/check_db.py
 
 | 날짜 | 버전 | 변경 |
 |------|------|------|
+| 2026-06-13 | v1.9 | 강사 재검토 이후 머지(#49 Macro·#50 Guardrail·#51 Strategist·#52 Qual·#56 Competitor MCP) 반영한 06-13 EOD 대시보드 추가 — 6대 피드백 중 4건 코드 해소·남은 ×2 레버(LangGraph·sLLM) 강조 |
 | 2026-06-13 | v1.8 | 강사님 재검토 32/70(D) 원문 보관, 팀원·에이전트별 작업 현황 대시보드 확장 |
 | 2026-06-13 | v1.7 | Streamlit UI 사용 가이드(스크린샷 포함) 추가, RAGAS 실데이터 실측·Macro Agent 머지 반영 |
 | 2026-06-12 | v1.6 | CI 안전망 추가, OpenRouter 재시도, 루브릭 진행도 대시보드 추가 |
