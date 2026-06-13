@@ -222,7 +222,8 @@
         <p class="lede">
           2026-05-31 강사님 검토 리포트(커밋 <strong>d24b475</strong>, 종합 <strong>20/70 · F등급</strong>) 루브릭 10항목에 대해
           <strong>리포트 시점 점수 → 현재 점수(2026-06-12) → 목표</strong>를 추적합니다.
-          CI 안전망(PR #39)과 OpenRouter 재시도(PR #40)가 들어갔고, RAGAS 정량 평가는 구현 중입니다.
+          CI 안전망(PR #39)·OpenRouter 재시도(PR #40)·RAGAS 평가 하네스(PR #42)·Macro Agent(PR #43)가 머지됐고,
+          개인 검증 DB(실데이터) 기준 첫 RAGAS 실측까지 완료했습니다.
         </p>
         <div class="score-journey">
           <div class="score-step step-report">
@@ -304,6 +305,22 @@
             <li>루브릭 #2 점수 3→4 진행의 근거 (단, qual fallback 회귀 리스크 별도)</li>
           </ul>
         </div>
+        <div class="item-card">
+          <h3><span class="tag tag-done">머지됨</span> PR #42 — RAGAS 평가 하네스</h3>
+          <ul>
+            <li>골든셋 5케이스 + <code>run_benchmark.py</code> (rule-based + RAGAS faithfulness)</li>
+            <li>실데이터 DB 기준 실측: rule-based <strong>40/41</strong>, faithfulness <strong>0.4096</strong> 베이스라인</li>
+            <li>OpenRouter 기본 모델 퇴역(404) 버그 수정 → Competitor narrative 정상화</li>
+          </ul>
+        </div>
+        <div class="item-card">
+          <h3><span class="tag tag-done">머지됨</span> PR #43 — Macro Agent (팀원: melinamuun)</h3>
+          <ul>
+            <li>거시경제 기반 투자 환경 평가 에이전트 신규 구현 (+508줄, 테스트 포함)</li>
+            <li><code>MacroResult</code> 스키마 + <code>AgentState.macro</code> 필드 추가 (순수 추가 변경)</li>
+            <li>새 CI 안전망 첫 외부 검증 통과 사례</li>
+          </ul>
+        </div>
       </div>
     </section>
 
@@ -325,6 +342,23 @@
             <li>루브릭 #2(에러핸들링&amp;폴백)가 4점으로 확정되려면 이 회귀 해소가 선행 조건</li>
           </ul>
         </div>
+        <div class="item-card">
+          <h3><span class="tag tag-now">공지</span> [영역 외 수정] Curator corp_code 누락 보정 — PM(이동원)</h3>
+          <p>
+            RAGAS 실측 과정에서 <strong>Curator가 삼성전자 외 모든 종목에 corp_code를 반환하지 않는 버그</strong>를
+            발견했습니다. 에이전트 설계 원칙("KRX 종목코드와 DART corp_code를 함께 반환")에 어긋나며,
+            DB 연결 환경에서 Quant의 DART 재무 조회가 전 종목 실패해 E2E와 RAGAS 측정이 차단되는
+            상태였습니다 (DB 없던 시절엔 quant fallback에 가려져 보이지 않던 버그).
+          </p>
+          <ul>
+            <li><strong>수정 범위 (로직 변경 없음)</strong>: ① 카탈로그 corp_code 채움 — DART 공식 API 검증값
+              (SK하이닉스 00164779, KB금융 00688996, 신한지주 00382199) ② corp_code가 비면
+              stock_code로 카탈로그에서 보충하는 <code>_resolve_corp_code</code> 헬퍼 추가</li>
+            <li><strong>검증</strong>: 기존 테스트 45개 전부 통과 + E2E 5케이스 정상 동작 확인</li>
+            <li><strong>Curator 담당자께</strong>: PR 리뷰 부탁드립니다. 다른 방식(예: DB lookup)을 원하시면
+              되돌리기 쉽게 별도 커밋으로 분리해 두었습니다 🙏</li>
+          </ul>
+        </div>
       </div>
     </section>
 
@@ -336,8 +370,9 @@
         <div class="tl-item current">
           <div class="tl-rail"><div class="tl-dot">1</div><div class="tl-line"></div></div>
           <div class="tl-body">
-            <h3>RAGAS 정량 평가 하네스 <span class="tag tag-now">진행 중</span> <span class="tag tag-owner">이동원 직접</span></h3>
-            <p><code>feature/dongwon-eval-ragas</code> 브랜치에서 구현 중. 루브릭 #8은 등급 상한 게이트 항목이라 최우선.</p>
+            <h3>RAGAS 정량 평가 하네스 <span class="tag tag-done">1차 완료</span> <span class="tag tag-owner">이동원 직접</span></h3>
+            <p>PR #42 머지 + 개인 검증 DB(실데이터) 실측 완료 — faithfulness 0.4096 베이스라인 확보.
+               다음: 실데이터 적재 확대와 Qual RAG 연결 후 목표 0.80을 향해 재측정.</p>
           </div>
         </div>
         <div class="tl-item">
@@ -415,8 +450,8 @@
         nowLabel: "0", evidence: "미착수." },
       { no: 7, name: "vLLM", weight: 1, report: 0, now: 0, target: 1, status: "none",
         nowLabel: "0", evidence: "미착수." },
-      { no: 8, name: "RAGAS 정량평가", weight: 2, report: 0, now: 0, target: 4, status: "progress", gate: true,
-        nowLabel: "진행중", evidence: "feature/dongwon-eval-ragas 브랜치에서 구현 중. 등급 상한 게이트 항목." },
+      { no: 8, name: "RAGAS 정량평가", weight: 2, report: 0, now: 3, target: 4, status: "improved", gate: true,
+        nowLabel: "0→3 개선", evidence: "PR #42 머지: 골든셋 5케이스 + run_benchmark.py 재실행 가능 + 리포트 커밋. 실데이터 DB 기준 실측 — rule-based 40/41, faithfulness 0.4096 베이스라인(목표 0.80, 실데이터 적재 확대·Qual RAG 연결로 개선 예정). 등급 상한 게이트 해소." },
       { no: 9, name: "RAG 고도화", weight: 1, report: 2, now: 2, target: 3, status: "stalled",
         nowLabel: "2", evidence: "hybrid/reranker 미연결 (DB 인덱스는 존재)." },
       { no: 10, name: "스트리밍 & 비동기", weight: 1, report: 1, now: 1, target: 2, status: "none",
