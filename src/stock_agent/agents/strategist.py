@@ -13,7 +13,21 @@ def run_strategist(state: AgentState) -> AgentState:
     if state.quant is None or state.qual is None or state.competitor is None:
         raise ValueError("quant, qual, and competitor results are required before strategy")
 
-    aggregate_score = round((state.quant.score * 0.45) + (state.qual.score * 0.3) + (state.competitor.score * 0.25))
+    if state.macro is not None:
+        aggregate_score = round(
+            (state.quant.score   * 0.40) +
+            (state.qual.score    * 0.25) +
+            (state.competitor.score * 0.20) +
+            (state.macro.score   * 0.15)   # ← Macro 15% 반영
+        )
+    else:
+        # Macro 없으면 기존 가중치 유지
+        aggregate_score = round(
+            (state.quant.score   * 0.45) +
+            (state.qual.score    * 0.30) +
+            (state.competitor.score * 0.25)
+        )
+        
     signal = "BUY" if aggregate_score >= 76 else "SELL" if aggregate_score <= 44 else "HOLD"
 
     holding_weight = 0.0
