@@ -3,6 +3,9 @@
 기존 구현은 `passed=True` 고정으로 사실상 게이트가 없었다. 이 버전은 4개 검증을 수행하고
 결함 유형에 따라 ① 출력 차단(passed=False) ② Strategist 재합성 요청(needs_revision) ③ 리스크
 경고를 구분한다. 모든 검증 과정은 `Trace` span으로 관측되며 결과는 `checks`에 보존된다.
+
+PR #52(공유 fallback 헬퍼) 통합: mock_data_audit가 qual.evidence/risks와 competitor의
+data_quality_flags/warnings를 함께 검사해 fallback 근거를 일관되게 경고한다.
 """
 
 from __future__ import annotations
@@ -97,11 +100,16 @@ def run_guardrail(state: AgentState) -> AgentState:
             )
 
     # 4) 리스크 게이트 — mock/fallback 데이터 의존도 감사 (재합성으로 못 고침, 신뢰도 경고만).
+    #    PR #52 통합: qual.evidence와 competitor.warnings의 fallback 근거까지 함께 검사한다.
     with trace.span("mock_data_audit") as span:
         mock_sources: list[str] = []
-        if state.competitor is not None and _looks_like_mock(list(state.competitor.data_quality_flags)):
+        if state.competitor is not None and _looks_like_mock(
+            list(state.competitor.data_quality_flags) + list(state.competitor.warnings)
+        ):
             mock_sources.append("competitor")
-        if state.qual is not None and _looks_like_mock(list(state.qual.risks)):
+        if state.qual is not None and _looks_like_mock(
+            list(state.qual.risks) + list(state.qual.evidence)
+        ):
             mock_sources.append("qual")
         if state.quant is not None and _looks_like_mock([str(v) for v in state.quant.metrics.values()]):
             mock_sources.append("quant")
