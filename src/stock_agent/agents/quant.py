@@ -2,7 +2,6 @@ import time
 
 import psycopg2
 
-from stock_agent.agents.fallback import ensure_database_available
 from stock_agent.config import get_settings
 from stock_agent.schemas.analysis import AgentState, QuantResult
 from stock_agent.tools.financial_tool import get_financial_metrics
@@ -51,8 +50,6 @@ def _normalize_metrics(raw: dict[str, float | int], fallback: dict[str, float | 
         for key in fallback
     }
 
-load_dotenv()
-DATABASE_URL = os.getenv("DATABASE_URL") or get_settings().resolved_database_url
 
 def run_quant(state: AgentState) -> AgentState:
     """
@@ -76,28 +73,11 @@ def run_quant(state: AgentState) -> AgentState:
     fin_source = "fallback"
     fallback_reasons: list[str] = []
 
+    # #53 retry 헬퍼로 DB 연결을 시도하고, 실패하면 기본값으로 graceful degradation.
+    # (머지 leftover였던 중복 직접연결 블록을 제거해 import·테스트 정합성 복구)
     conn, connect_reasons = _connect_with_retry()
     if conn is None:
         fallback_reasons.extend(connect_reasons)
-        
-    # DB 커넥션 오픈 및 Tool 호출
-    try:
-        ensure_database_available()
-        conn = psycopg2.connect(DATABASE_URL, connect_timeout=1)
-    except (OperationalError, Exception) as exc:
-        price_metrics = {
-            "per": 18.0,
-            "pbr": 1.3,
-            "close_price": 0,
-        }
-        fin_metrics = {
-            "roe": 8.0,
-            "revenue_growth_yoy": 4.0,
-            "operating_margin": 12.0,
-            "debt_ratio": 90.0,
-        }
-        fallback_reason = f"{exc.__class__.__name__}: {exc}"
-
     else:
         try:
             try:
