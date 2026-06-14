@@ -32,4 +32,5 @@
   - ①은 `src/stock_agent/mcp_bridge/`의 자체 FastMCP 서버를 **stdio 자식 프로세스**로 띄워(`initialize → tools/list → call_tool` 핸드셰이크) pykrx 시세 기반 peer 비교를 만듭니다(루브릭 #6 "실동작 1경로"). 상세는 [`mcp_bridge/README.md`](../mcp_bridge/README.md) 참고.
   - `peer_tool.build_comparison_from_market_rows`가 DB 없이 외부 시세 레코드로 동일한 점수·상대위치 엔진을 재사용합니다(기존 DB 로더 함수 시그니처는 무변경 — monkeypatch 계약 유지).
 - `peer_tool.py`의 순수 계산 함수(`calculate_metric_row`, `calculate_relative_position`, `select_peer_rows` 등)는 DB 없이 단위 테스트 가능하며, `tests/tools/test_peer_tool.py`에서 검증합니다.
+- peer 비교 **품질 회귀**는 `eval/run_competitor_eval.py`(골든셋 `eval/competitor_golden/cases.json`)로 고정합니다 — peer 선정 순서·종합 score·핵심 플래그를 결정적 스냅샷과 대조하며, CI(`tests/test_competitor_eval.py`)에서 비용 0원으로 매번 실행됩니다.
 - Competitor의 LLM narrative는 `llm/openrouter_client.py`를 통해 호출하며, 일시적 장애(429·5xx·네트워크 오류)에 한해 최대 2회 재시도합니다. 수치는 LLM이 만들지 않고 Tool 계산 결과를 해석만 합니다.

@@ -137,6 +137,58 @@ def discover_tools(timeout: float = _DEFAULT_TIMEOUT_SECONDS) -> list[dict[str, 
         raise McpUnavailableError(f"MCP tools/list 실패: {exc.__class__.__name__}: {exc}") from exc
 
 
+async def _acall_tool(tool_name: str, arguments: dict[str, Any], timeout: float) -> Any:
+    """서버와 stdio 핸드셰이크 후 임의의 Tool을 1회 호출하고 JSON 페이로드를 반환한다.
+
+    Competitor 전용 흐름과 무관하게, 다른 에이전트·외부 프로세스가 이 서버를 A2A
+    엔드포인트로 소비할 수 있도록 하는 범용 진입점이다(initialize→tools/list→call_tool).
+    호출 대상 Tool이 tools/list에 없으면 즉시 폴백 신호로 전환한다.
+    """
+    from mcp import ClientSession
+    from mcp.client.stdio import stdio_client
+
+    params = _server_params()
+
+    async def _run() -> Any:
+        async with stdio_client(params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                listed = await session.list_tools()
+                available = set(_tool_names(listed))
+                if tool_name not in available:
+                    raise McpUnavailableError(
+                        f"MCP 서버에 '{tool_name}' Tool이 없습니다 (발견: {sorted(available)})"
+                    )
+                result = await session.call_tool(tool_name, arguments)
+                return _extract_payload(result)
+
+    return await asyncio.wait_for(_run(), timeout=timeout)
+
+
+def call_mcp_tool(
+    tool_name: str,
+    arguments: dict[str, Any] | None = None,
+    timeout: float = _DEFAULT_TIMEOUT_SECONDS,
+) -> Any:
+    """동기 진입점: 이 stdio 서버의 임의 Tool을 호출해 결과(JSON)를 반환한다.
+
+    범용 A2A 소비 표면 — Competitor 폴백뿐 아니라 어떤 호출자든 사용할 수 있다.
+    실패(미설치·기동 실패·타임아웃·미발견)는 모두 `McpUnavailableError`로 통일한다.
+    """
+    if not is_available():
+        raise McpUnavailableError("mcp 패키지가 설치되어 있지 않습니다. `pip install -e .[mcp]`")
+    try:
+        return asyncio.run(_acall_tool(tool_name, arguments or {}, timeout))
+    except McpUnavailableError:
+        raise
+    except (asyncio.TimeoutError, TimeoutError) as exc:
+        raise McpUnavailableError(f"MCP 서버 응답 타임아웃({timeout}s)") from exc
+    except Exception as exc:  # noqa: BLE001 - 서버 기동·통신 실패를 단일 신호로 통일
+        raise McpUnavailableError(
+            f"MCP call_tool('{tool_name}') 실패: {exc.__class__.__name__}: {exc}"
+        ) from exc
+
+
 async def _afetch(
     stock_code: str,
     sector: str | None,
