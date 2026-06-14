@@ -27,6 +27,25 @@ def test_discover_tools_lists_expected_tools() -> None:
     assert by_name["market_metrics"]["description"]
 
 
+def test_call_mcp_tool_generic_roundtrip_offline() -> None:
+    """범용 진입점 call_mcp_tool로 외부 소비자(A2A) round-trip을 검증한다.
+
+    Competitor 전용 흐름이 아니라, 공개 표면만으로 임의 Tool을 호출하는 경로다.
+    sector_roster는 KRX 네트워크가 필요 없어 오프라인·CI에서도 실데이터를 반환한다.
+    """
+    roster = peer_data_client.call_mcp_tool(
+        "sector_roster", {"sector": "반도체"}, timeout=_TIMEOUT
+    )
+    assert isinstance(roster, list) and roster
+    assert all(entry.get("stock_code") for entry in roster)
+
+
+def test_call_mcp_tool_unknown_tool_raises_unavailable() -> None:
+    """tools/list에 없는 Tool 호출은 통일된 McpUnavailableError로 전환된다."""
+    with pytest.raises(peer_data_client.McpUnavailableError):
+        peer_data_client.call_mcp_tool("does_not_exist", {}, timeout=_TIMEOUT)
+
+
 def test_fetch_peer_data_offline_uses_static_roster() -> None:
     """fetch 경로의 tools/list 검증 + sector_roster 호출까지 round-trip 한다.
 

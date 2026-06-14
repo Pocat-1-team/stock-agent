@@ -42,6 +42,53 @@ DB 실패           → ① MCP 실시간 시세(실데이터)  ← 본 모듈
   마커만 붙이고, guardrail `mock_data_audit`가 mock으로 오판하지 않도록 `"mock"`/`"fallback"`/`"데모용"`
   문자열을 의도적으로 배제합니다.
 
+## 외부 노출 (A2A · 범용 소비)
+
+이 서버는 Competitor 폴백 전용이 아니라 **표준 stdio MCP 서버**이므로, 다른 에이전트나
+외부 MCP 클라이언트가 그대로 소비할 수 있습니다. 호출자는 서버 내부(pykrx·로스터·점수
+엔진)를 알 필요 없이 공개 클라이언트 표면만 사용합니다.
+
+### 범용 클라이언트 진입점 (`peer_data_client`)
+
+| 함수 | 용도 |
+|------|------|
+| `discover_tools(timeout)` | `initialize → tools/list` 핸드셰이크로 노출 Tool 발견 |
+| `call_mcp_tool(tool_name, arguments, timeout)` | **임의 Tool을 1회 호출**(범용 A2A 진입점). 미발견·기동 실패·타임아웃은 `McpUnavailableError`로 통일 |
+| `fetch_mcp_peer_data(...)` | Competitor 폴백 전용 고수준 헬퍼(위 진입점을 조합) |
+
+```python
+from stock_agent.mcp_bridge.peer_data_client import discover_tools, call_mcp_tool
+
+discover_tools()                                   # [{name, description}, ...]
+call_mcp_tool("sector_roster", {"sector": "반도체"})  # 정적 데이터(오프라인 동작)
+call_mcp_tool("market_metrics", {"stock_codes": ["005930"]})  # pykrx 실시간
+```
+
+### 외부 MCP 클라이언트 등록 (Claude Desktop / Cursor 등)
+
+표준 stdio 서버이므로 어떤 MCP 클라이언트의 `mcpServers` 설정에도 등록할 수 있습니다.
+
+```json
+{
+  "mcpServers": {
+    "stock-agent-peer-data": {
+      "command": "python",
+      "args": ["-m", "stock_agent.mcp_bridge.peer_data_server"],
+      "env": { "PYTHONPATH": "src" }
+    }
+  }
+}
+```
+
+### 외부 소비자 데모
+
+```bash
+# 공개 API(discover_tools·call_mcp_tool)만으로 두 Tool을 소비하는 A2A 시나리오
+PYTHONPATH=src python scripts/mcp_external_consumer_demo.py 반도체
+```
+
+`sector_roster` round-trip은 네트워크 없이 동작하므로 시연·CI에서 그대로 재현됩니다.
+
 ## 설치 / 실행
 
 ```bash
@@ -68,7 +115,7 @@ import·테스트 가능하며, 클라이언트는 `is_available()`이 False를 
 ## 테스트
 
 - `tests/mcp_bridge/test_mcp_bridge.py` — 로스터·서버 순수 헬퍼·클라이언트 헬퍼(네트워크/실서버 미사용)
-- `tests/mcp_bridge/test_mcp_handshake.py` — **실제 stdio round-trip 자동 검증**. `discover_tools()`로 `tools/list`를 호출해 `sector_roster`·`market_metrics` 노출을 확인(오프라인 동작, `mcp` 미설치 시 skip)
+- `tests/mcp_bridge/test_mcp_handshake.py` — **실제 stdio round-trip 자동 검증**. `discover_tools()`로 `tools/list`를 확인하고, **범용 `call_mcp_tool()`** 로 `sector_roster` round-trip + 미발견 Tool의 `McpUnavailableError` 전환까지 검증(오프라인 동작, `mcp` 미설치 시 skip)
 - `tests/tools/test_peer_tool.py` — `build_comparison_from_market_rows`(실시간 레코드 → PeerComparison)
 - `tests/agents/test_competitor_agent.py` — DB실패→MCP실데이터 / MCP실패→mock 3단 폴백 체인
 
