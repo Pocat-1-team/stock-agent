@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import re
 from typing import Optional
 
+from stock_agent.observability import Trace, flush
 from stock_agent.schemas.analysis import AgentState, GuardrailResult, StrategistResult
 """Guardrail 에이전트 — 출력 게이팅 + 관측.
 
@@ -11,8 +14,6 @@ from stock_agent.schemas.analysis import AgentState, GuardrailResult, Strategist
 PR #52(공유 fallback 헬퍼) 통합: mock_data_audit가 qual.evidence/risks와 competitor의
 data_quality_flags/warnings를 함께 검사해 fallback 근거를 일관되게 경고한다.
 """
-
-from __future__ import annotations
 
 from stock_agent.observability import Trace, flush
 from stock_agent.schemas.analysis import AgentState, GuardrailResult
@@ -141,18 +142,9 @@ def run_guardrail(state: AgentState, evidence_bundle: Optional[dict] = None, pol
 
     disclaimer = " ".join(disclaimer_lines)
 
-    guardrail_result = GuardrailResult(
-        passed=passed,
-        warnings=warnings,
-        revised_headline=revised_headline,
-        disclaimer=disclaimer,
-    )
-
-    state.guardrail = guardrail_result
     trace = Trace(name="guardrail")
     strategist = state.strategist
-    headline = strategist.headline
-    warnings: list[str] = []
+    headline = revised_headline or strategist.headline
     checks: list[dict[str, str | bool]] = []
 
     # 1) 표현 게이트 — 투자 권유성 금지 표현 완화 (항상 통과, 정보성)
