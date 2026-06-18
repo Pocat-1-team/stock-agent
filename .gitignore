@@ -3,6 +3,7 @@
 .claude/
 .serena/
 .venv/
+.venv-*/
 venv/
 semiconductor_agent/.env
 __pycache__/
@@ -16,3 +17,4 @@ data/
 logs/
 scripts/switch-model.sh
 scripts/switchmodel.sh
+node_modules/

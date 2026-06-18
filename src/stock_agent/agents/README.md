@@ -15,6 +15,7 @@
 | `qual.py` ⭐ | Qual Worker Agent | 뉴스·공시 RAG + 호재/악재 센티먼트 분석 | **W1 + W3** (핵심) |
 | `quant.py` | Quant Worker Agent | DART 재무 + pykrx 시세 → PER/PBR/성장률 계산, 5y 밸류에이션 | W3 (Tool) |
 | `competitor.py` | Competitor Agent | 동종업계 Peer 추출 + 횡비교 Heatmap | W1 (Hybrid Search) |
+| `macro.py` | Macro Agent | 거시경제 지표(금리/환율/물가/성장) 기반 투자 환경 평가 | W3 (Tool) |
 | `strategist.py` | Strategist & Synthesizer Agent | 정량·정성·Peer 결과 종합 → BUY/HOLD/SELL 성격의 분석 신호 + PB 리포트 작성 | W3 (ReAct) |
 | `guardrail.py` | Guardrail & Evaluator Agent | PII/욕설/투자권유 필터 + RAGAS 자동 채점 | **W2 + W5** |
 
@@ -31,6 +32,7 @@
 | Quant | 재무·시세 계산과 정량 해석 | LLM으로 숫자 생성 |
 | Qual | RAG 검색 결과 기반 정성 분석 | 출처 없는 뉴스 요약 |
 | Competitor | 같은 섹터 peer 선정과 비교 | 임의 peer 생성, 글로벌 peer 확장 |
+| Macro | 거시경제 지표(금리/환율/물가/성장) 분석, 업종별 점수 산출, 거시 리스크 경고 | LLM으로 숫자 생성, 개별 종목 재무 분석 |
 | Strategist | 사용자 포트폴리오 맥락에서 종합 | DB/API 직접 호출 남발 |
 | Guardrail | 금융 표현, 근거 부족, PII, 평가 검증 | 새로운 투자 논리 생성 |
 
@@ -59,6 +61,20 @@
 - DB 조회, API 호출, 계산식은 `agents/`에 직접 넣지 않고 `src/stock_agent/tools/` 또는 `src/stock_agent/rag/` 로 분리합니다.
 - 모든 agent output에는 가능한 한 `source`, `as_of_date`, `data_version`, `warnings`를 포함할 수 있도록 schema 확장을 고려합니다.
 - 에이전트 단위 테스트는 `tests/agents/test_<agent_name>.py` 에 작성합니다.
+
+## 에러핸들링 & 폴백 기준
+
+- 외부 의존성(DB, API, RAG/embedding, LLM gateway) 실패는 에이전트가 가능한 한 fallback 결과를 만들어 파이프라인을 유지합니다.
+- DB 연결은 테스트와 데모 경로가 오래 멈추지 않도록 짧은 `connect_timeout`과 단기 실패 캐시를 둡니다.
+- 예상 가능한 외부 실패 판정은 `fallback.py`의 `should_fallback()`을 사용합니다. 코드 버그처럼 예상하지 못한 예외는 숨기지 않고 다시 raise합니다.
+- fallback 결과에는 `fallback_reason` 또는 warning을 남겨 Strategist/Guardrail/UI가 신뢰도를 낮춰 표시할 수 있게 합니다.
+- 민감정보가 들어간 `.env.example` 충돌은 항상 placeholder 값을 채택합니다. 실제 키와 DB URL은 `.env` 또는 배포 환경변수로만 관리합니다.
+- 현재 구현 상태:
+  - Quant: DB 연결 실패 시 보수적인 mock 지표와 risk를 반환합니다.
+  - Qual: 뉴스/공시 RAG 검색 각각 실패 시 독립 fallback 문서를 반환합니다.
+  - Competitor: peer DB 연결 실패 시 ① 자체 MCP 서버(stdio)로 pykrx 실시간 시세 기반 peer 비교(실데이터)를 시도하고, 그마저 불가하면 ② mock peer 비교와 warning을 반환합니다.
+  - Macro: macro DB/tool 실패 시 mock 거시 지표와 risk를 반환합니다.
+  - Guardrail: fallback 근거가 포함된 결과를 사용자 경고로 승격합니다.
 
 ## 작업 충돌 방지
 
