@@ -587,9 +587,9 @@ def _to_output(state: AgentState) -> AnalysisOutput:
             "리스크": state.strategist.risks,
         },
         tier3={
-            "PB 리포트": "Phase 5에서 PDF/DOCX 생성 예정",
-            "밸류에이션 Excel": "Phase 5에서 Excel 생성 예정",
-            "산업/뉴스 분석 HTML": "Phase 3 RAG 연결 후 생성 예정",
+            "PB 리포트": "PDF 다운로드 가능",
+            "밸류에이션 Excel": "Excel 다운로드 가능",
+            "산업/뉴스 분석 HTML": "HTML 다운로드 가능",
         },
         state=state,
     )
