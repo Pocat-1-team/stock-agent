@@ -1,37 +1,50 @@
-# `src/stock_agent/rag/` — RAG 검색 컴포넌트
+# `src/stock_agent/rag/` - PostgreSQL/pgvector 검색
 
-뉴스·공시 텍스트를 임베딩→검색→재정렬하는 모듈입니다. 기본 저장소는 Postgres + pgvector입니다.
+> 뉴스·공시 텍스트를 임베딩하고 키워드·벡터 검색을 결합해 Qual Agent 근거를 제공합니다.
+
+## 폴더 소개
+
+- **What:** 임베딩 적재, pgvector 유사도 조회, Hybrid Search를 제공합니다.
+- **Why:** Qual Agent가 모델 기억이 아니라 저장된 근거를 인용하게 합니다.
+- `embed_news.py`가 원천 뉴스 텍스트를 임베딩 적재 형태로 변환합니다.
+- `pgvector_store.py`가 일반 유사도 검색 helper를 제공합니다.
+- `retriever.py`가 키워드와 벡터 후보를 합치고 점수를 정규화합니다.
+
+## 기술 스택
+
+| 기술 | 역할 |
+|------|------|
+| sentence-transformers | 한국어 포함 텍스트 임베딩 |
+| PostgreSQL GIN | 키워드 후보 검색 |
+| pgvector | cosine distance 벡터 검색 |
+| psycopg | DB 조회와 vector 등록 |
+
+## 동작 원리
+
+```mermaid
+flowchart LR
+    R[(raw_news)] --> E[embed_news]
+    E --> V[(rag_documents / rag_chunks)]
+    Q[사용자 질의] --> H[retriever Hybrid Search]
+    V --> H
+    H --> A[Qual Agent evidence]
+```
 
 ## 파일
 
-| 파일 | 역할 | 라이브러리 |
-|------|------|-----------|
-| `pgvector_store.py` | Postgres pgvector 유사도 검색 | psycopg + pgvector |
-| `embedding.py` | 후속 예정. 한국어 임베딩 모델 (BGE-m3 또는 Solar Embedding) | sentence-transformers 등 |
-| `retriever.py` | 후속 예정. Hybrid Search (keyword + vector) | Postgres GIN + pgvector |
-| `reranker.py` | 후속 예정. 검색 결과 재정렬 | sentence-transformers 등 |
-| `chroma_store.py` | 후속 optional. Chroma adapter | chromadb |
+| 파일 | 역할 |
+|------|------|
+| `embed_news.py` | 뉴스 텍스트 선택·임베딩 적재 |
+| `pgvector_store.py` | 유사 청크 조회 |
+| `retriever.py` | 뉴스·공시 Hybrid Search |
 
-## 데이터 흐름
+## 주요 결과와 검증
 
+2026-06-12 평가의 RAGAS faithfulness는 **0.4096**으로 목표 0.80 미달입니다. 근거 미검색 시 warning을 유지하며 품질을 과장하지 않습니다.
+
+```bash
+python -m pytest tests/rag -v
+python eval/run_benchmark.py --limit 2
 ```
-[원본 텍스트] → embedding.py → [벡터] → rag_documents / rag_chunks 적재
-                                            ↓
-사용자 쿼리 → retriever.py (Hybrid) → reranker.py → 최종 N개 청크 반환
-```
 
-## 작업 규칙
-
-- 정형 데이터와 RAG 데이터 모두 Postgres에 저장합니다. 임베딩 검색은 pgvector를 사용합니다.
-- Chroma는 삭제하지 않고 향후 optional backend로 추가할 수 있게 이름만 예약합니다.
-- 청킹 사이즈 기본 512 token. 변경 시 평가 하네스 재실행 필수.
-- Qual Agent는 검색된 chunk에 없는 사실을 생성하지 않습니다.
-- 반환 결과에는 `document_id`, `title`, `url`, `published_at`, `stock_code`, `score`를 포함해 evidence 추적이 가능해야 합니다.
-- 검색 품질 평가는 최소 `Source Attachment Rate`, `RAG Faithfulness`, `Top-k relevance`를 봅니다.
-
-## 우선 연결 작업
-
-1. `Qual Agent`에서 `search_similar_chunks()` 호출
-2. 검색 결과를 `QualResult.evidence`와 향후 `sources` 필드에 연결
-3. RAG 결과가 비어 있을 때 `warnings`에 근거 부족 표시
-4. `Guardrail`에서 출처 없는 정성 근거를 warning 처리
+로컬 Anaconda의 패키지 메타데이터가 손상된 경우 `sentence_transformers` import에서 수집 오류가 날 수 있습니다.
