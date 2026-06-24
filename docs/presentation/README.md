@@ -14,7 +14,7 @@
 
 `final_presentation.pptx`는 PowerPoint 편집용 산출물입니다. 텍스트, 표, 도형은 대부분 편집 가능한 PPTX 요소로 구성했고, 실제 화면과 아키텍처 이미지만 이미지 자산으로 포함했습니다.
 
-`build_final_presentation_pptx.mjs`는 `final_presentation_source.json`을 바탕으로 PPTX를 재생성하는 스크립트입니다. 기본 실행은 PPTX만 생성하고, 렌더링 미리보기는 필요할 때 `--preview`를 붙입니다.
+`build_final_presentation_pptx.mjs`는 `final_presentation_source.json`을 바탕으로 PPTX를 재생성하는 스크립트입니다. 기본 실행은 PPTX만 생성합니다.
 
 ```powershell
 $env:HOME='C:\Users\kik32'
