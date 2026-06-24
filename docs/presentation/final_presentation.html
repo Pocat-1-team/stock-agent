@@ -173,6 +173,7 @@ tr:last-child td { border-bottom: 0; }
 #counter { color: var(--muted); min-width: 52px; text-align: center; font-size: 14px; }
 .print-source { display: none; }
 @media print {
+  @page { size: 16in 9in; margin: 0; }
   html, body { width: 16in; height: 9in; overflow: visible; background: var(--bg); }
   .deck { width: 16in; height: auto; background: var(--bg); }
   .slide {
