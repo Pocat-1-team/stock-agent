@@ -252,11 +252,11 @@
         },
         {
           "label": "안정성",
-          "text": "DB/임베딩 실패 시 fallback evidence와 reason을 남겨 Guardrail까지 전달"
+          "text": "데모에서 뉴스 fallback이 보이면 DB/임베딩 연결 실패 신호로 보고 연결 상태를 점검"
         }
       ],
       "takeaway": "Qual Agent는 '뉴스를 읽어준다'가 아니라, 검색 가능한 근거를 만들어 정성 리스크로 변환한다.",
-      "speakerNote": "30초 버전: 뉴스 수집, 임베딩 저장, Hybrid 검색, reranker, evidence/risk 생성 순서만 말한다."
+      "speakerNote": "30초 버전: 뉴스 수집, 임베딩 저장, Hybrid 검색, reranker, evidence/risk 생성 순서만 말한다. 영상에서 뉴스 fallback이 보이면 기능 실패가 아니라 DB 헬스체크 또는 임베딩 검색 연결 실패를 보수적으로 노출한 것이며, DATABASE_URL과 rag_chunks 임베딩 적재 상태를 확인해야 한다고 답변한다."
     },
     {
       "id": 12,
