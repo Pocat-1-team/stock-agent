@@ -410,7 +410,7 @@ tbody tr:last-child td { background: rgba(39,211,208,.12); font-weight: 800; }
       <div class="page">11</div>
     </header>
     <main class="qual-layout">
-      <p class="summary">팀원이 정리한 뉴스 수집 → RAG 임베딩 → Hybrid/RRF 검색 → reranker → Qual evidence/risk 생성 흐름을 발표용으로 압축했습니다.</p>
+      <p class="summary">뉴스 수집 → RAG 임베딩 → Hybrid/RRF → reranker → evidence/risk 생성 흐름입니다.</p>
       <div class="qual-flow">
         <article class="flow-step accent-0">
             <b>01</b>
@@ -443,7 +443,7 @@ tbody tr:last-child td { background: rgba(39,211,208,.12); font-weight: 800; }
           <span>출처 없는 요약이 아니라 검색 근거를 Qual evidence로 전달</span>
         </article><article class="agent-card accent-2">
           <strong>안정성</strong>
-          <span>DB/임베딩 실패 시 fallback evidence와 reason을 남겨 Guardrail까지 전달</span>
+          <span>데모에서 뉴스 fallback이 보이면 DB/임베딩 연결 실패 신호로 보고 연결 상태를 점검</span>
         </article>
       </div>
     </main>
