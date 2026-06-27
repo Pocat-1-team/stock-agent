@@ -4,13 +4,28 @@ from stock_agent.schemas.analysis import AgentState, QualResult
 
 _SAMSUNG_FALLBACK_NEWS_DOCS = [
     {
-        "title": "삼성전자 Q1 2026 실적 발표",
+        "title": "메모리 업종 변동성 확대",
         "body": (
-            "삼성전자는 2026년 1분기 연결 매출 133.9조원, 영업이익 57.2조원을 발표했습니다. "
-            "메모리 사업은 AI 수요와 평균판매가격 상승에 힘입어 분기 최대 수준의 실적을 냈습니다."
+            "메모리 가격 상승이 소비자 제품 가격 부담으로 이어질 수 있다는 우려가 커지며 "
+            "삼성전자와 SK하이닉스 등 메모리 관련주의 단기 변동성이 확대됐습니다. AI 서버 "
+            "수요와 일반 소비재 수요의 온도 차이를 함께 봐야 합니다."
         ),
-        "publisher": "Samsung Newsroom, 2026-06-05",
-        "source_url": "https://news.samsung.com/ca/samsung-electronics-announces-first-quarter-2026-results",
+        "publisher": "Barron's, 2026-06-26",
+        "source_url": "https://www.barrons.com/articles/micron-stock-price-sk-hynix-samsung-kospi-459506f7",
+        "stock_code": "005930",
+    },
+    {
+        "title": "SK하이닉스 HBM 선점에 따른 경쟁 압력",
+        "body": (
+            "HBM 시장에서 SK하이닉스가 AI 수요를 선점하며 삼성전자의 상대 경쟁력이 투자자 "
+            "관심사로 부각됐습니다. 삼성전자는 HBM4 공급과 고부가 제품 확대 속도가 핵심 "
+            "리스크입니다."
+        ),
+        "publisher": "Reuters/Investing.com, 2026-06-24",
+        "source_url": (
+            "https://www.investing.com/news/stock-market-news/"
+            "how-sk-hynixs-bet-on-a-niche-memory-chip-made-it-more-valuable-than-samsung-4757282"
+        ),
         "stock_code": "005930",
     },
     {
@@ -29,28 +44,13 @@ _SAMSUNG_FALLBACK_NEWS_DOCS = [
         "stock_code": "005930",
     },
     {
-        "title": "SK하이닉스 HBM 선점에 따른 경쟁 압력",
+        "title": "삼성전자 Q1 2026 실적 발표",
         "body": (
-            "HBM 시장에서 SK하이닉스가 AI 수요를 선점하며 삼성전자의 상대 경쟁력이 투자자 "
-            "관심사로 부각됐습니다. 삼성전자는 HBM4 공급과 고부가 제품 확대 속도가 핵심 "
-            "리스크입니다."
+            "삼성전자는 2026년 1분기 연결 매출 133.9조원, 영업이익 57.2조원을 발표했습니다. "
+            "메모리 사업은 AI 수요와 평균판매가격 상승에 힘입어 분기 최대 수준의 실적을 냈습니다."
         ),
-        "publisher": "Reuters/Investing.com, 2026-06-24",
-        "source_url": (
-            "https://www.investing.com/news/stock-market-news/"
-            "how-sk-hynixs-bet-on-a-niche-memory-chip-made-it-more-valuable-than-samsung-4757282"
-        ),
-        "stock_code": "005930",
-    },
-    {
-        "title": "메모리 업종 변동성 확대",
-        "body": (
-            "메모리 가격 상승이 소비자 제품 가격 부담으로 이어질 수 있다는 우려가 커지며 "
-            "삼성전자와 SK하이닉스 등 메모리 관련주의 단기 변동성이 확대됐습니다. AI 서버 "
-            "수요와 일반 소비재 수요의 온도 차이를 함께 봐야 합니다."
-        ),
-        "publisher": "Barron's, 2026-06-26",
-        "source_url": "https://www.barrons.com/articles/micron-stock-price-sk-hynix-samsung-kospi-459506f7",
+        "publisher": "Samsung Newsroom, 2026-06-05",
+        "source_url": "https://news.samsung.com/ca/samsung-electronics-announces-first-quarter-2026-results",
         "stock_code": "005930",
     },
 ]
