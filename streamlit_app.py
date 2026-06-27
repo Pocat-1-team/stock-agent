@@ -805,26 +805,8 @@ def _render_output() -> None:
         st.write("질문 분류")
         st.json(output.state.user_request.model_dump(mode="json"), expanded=False)
 
-    if output.state.strategist:
-        st.write("Graph 상태")
-        route = output.state.graph_route
-        col_route, col_agents, col_model = st.columns(3)
-        col_route.metric("graph route", route.get("analysis_scope") or "unknown")
-        col_agents.metric(
-            "contributing agents",
-            ", ".join(output.state.strategist.contributing_agents) or "none",
-        )
-        col_model.metric(
-            "model",
-            f"{output.state.strategist.model_provider}/{output.state.strategist.model}",
-        )
-        st.caption(
-            f"degraded={output.state.strategist.degraded} | "
-            f"fallback_used={output.state.strategist.fallback_used} | "
-            f"requested_depth={route.get('requested_depth')}"
-        )
-        if output.state.worker_errors:
-            st.warning(" / ".join(output.state.worker_errors))
+    if output.state.strategist and output.state.worker_errors:
+        st.warning(" / ".join(output.state.worker_errors))
 
     # Rendered report (Tier cards)
     if output.state.rendered_report:

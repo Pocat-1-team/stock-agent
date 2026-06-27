@@ -48,5 +48,7 @@ def test_staged_intake_runs_analysis_after_portfolio_save() -> None:
 
     assert any(widget.label == "포트폴리오 적합도" for widget in at.metric)
     assert any("질문 분류" in widget.value for widget in at.markdown)
+    assert not any("Graph 상태" in widget.value for widget in at.markdown)
+    assert not any(widget.label in {"graph route", "contributing agents", "model"} for widget in at.metric)
     assert any("마지막 에이전트 실행 로그" in widget.value for widget in at.markdown)
     assert any("InvestmentAnalyst" in widget.value for widget in at.markdown)
